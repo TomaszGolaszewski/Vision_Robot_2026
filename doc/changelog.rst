@@ -1,9 +1,9 @@
 Changelog
 ======
 
-v0.1.1 - 
+v0.1.1 - 25.12.2025 
 ------
-* 
+* Cloned more assets from project Vision_Blob_2025.
 
 v0.1.0 - 25.12.2025
 ------

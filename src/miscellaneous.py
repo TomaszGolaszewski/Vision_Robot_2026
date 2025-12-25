@@ -6,7 +6,18 @@ import numpy as np
 import cv2
 import time 
 
-def get_objects_by_color(image_original):
+def get_objects_by_color(image_original: cv2.typing.MatLike, area_threshold: int = 5000) -> tuple[cv2.typing.MatLike, list]:
+    """
+    Method detects objects from passed image and returns masked image and list of found objects coordinates.
+
+    Args:
+        image_original (MatLike): Original image.
+        area_threshold (int): The limit size of the area that defines the found object.
+
+    Returns:
+        MatLike: masked image with drawn objects.
+        list: list of coordinates of found objects.
+    """
 
     found_objects_list = []
 
@@ -39,7 +50,7 @@ def get_objects_by_color(image_original):
     
     for contour in contours:
         area = cv2.contourArea(contour)
-        if (area > 5000):
+        if (area > area_threshold):
             x, y, w, h = cv2.boundingRect(contour)
             center_coordinates = (x+w//2, y+h//2)
             found_objects_list.append(center_coordinates)
@@ -49,3 +60,26 @@ def get_objects_by_color(image_original):
             image_masked = cv2.circle(image_masked, center_coordinates, 10, (0, 0, 255), 2)
 
     return image_masked, found_objects_list
+
+
+def draw_points_from_list(image: cv2.typing.MatLike, 
+                          points: list, 
+                          color: tuple = (0, 0, 255), 
+                          radius: int = 10, 
+                          border: int = 2):
+    """
+    Draws circles on an image at specified points.
+
+    Args:
+        image (MatLike): The input image on which circles will be drawn.
+        points (list): A list of points where each point is represented as [x, y].
+        color (tuple, optional): The color of the circles in BGR format. Default is (0, 0, 255) (red).
+        radius (int, optional): The radius of the circles. Default is 10.
+        border (int, optional): The thickness of the circle border. Default is 2.
+
+    Returns:
+        MatLike: The image with the circles drawn on it.
+    """
+    for p in points:
+        image = cv2.circle(image, [int(p[0]), int(p[1])], radius, color, border)
+    return image

@@ -1,6 +1,10 @@
 Changelog
 ======
 
+v0.1.3 - 15.02.2026 
+------
+* Added tests for vision QR.
+
 v0.1.2 - 15.02.2026 
 ------
 * Added tests for vision 2D;

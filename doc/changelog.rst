@@ -1,6 +1,11 @@
 Changelog
 ======
 
+v0.1.2 - 15.02.2026 
+------
+* Added tests for vision 2D;
+* Code cleaning.
+
 v0.1.1 - 25.12.2025 
 ------
 * Cloned more assets from project Vision_Blob_2025.

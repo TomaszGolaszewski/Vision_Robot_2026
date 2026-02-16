@@ -1,6 +1,10 @@
 Changelog
 ======
 
+v0.1.4 - 16.02.2026 
+------
+* Added QR code detection and decoding.
+
 v0.1.3 - 15.02.2026 
 ------
 * Added tests for vision QR.

@@ -25,18 +25,28 @@ def test_vision_QR():
 
         # reading the video from the webcam in image frames
         is_frame, image_original_frame = webcam.read()
+        image_processed = image_original_frame.copy()
 
-        # decoded_text, vertices_coords, binarized_QR_code = qr_detect.detectAndDecode(image_original_frame)
+        # detect QR codes
+        # decoded_text, vertices_coords, binarized_straight_qrcode = qr_detect.detectAndDecode(image_original_frame)
         # is_code, vertices_coords = qr_detect.detect(image_original_frame)
-        is_code, vertices_coords = qr_detect.detectMulti(image_original_frame)
+        # is_code, vertices_coords = qr_detect.detectMulti(image_original_frame)
+        is_code, decoded_text, vertices_coords, binarized_straight_qrcode = qr_detect.detectAndDecodeMulti(image_original_frame)
+
         if is_code:
-            for code_coords in vertices_coords:
-                print(code_coords, end=" ")
+            print(vertices_coords)
             print("--------")
 
+            # draw outlines of the codes
+            image_processed = cv2.polylines(image_original_frame, vertices_coords.astype(int), True, (0, 255, 0), 3)
+
+            # draw code ids on the image
+            for text, points in zip(decoded_text, vertices_coords):
+                image_processed = cv2.putText(image_processed, text, points[0].astype(int),
+                      cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
 
         # draw window
-        cv2.imshow("QR Detection in Real-TIme", image_original_frame) #images_concatenated)
+        cv2.imshow("QR Detection in Real-TIme", image_processed) #image_original_frame) #images_concatenated)
 
            # measure time
         if time.time() > last_time + 1:

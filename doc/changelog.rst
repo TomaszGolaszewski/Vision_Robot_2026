@@ -1,6 +1,10 @@
 Changelog
 ======
 
+v0.1.5 - 16.02.2026 
+------
+* Added tests for robot motion.
+
 v0.1.4 - 16.02.2026 
 ------
 * Added QR code detection and decoding.

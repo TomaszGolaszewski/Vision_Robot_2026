@@ -3,12 +3,15 @@ import time
 import json
 import copy
 
+# Global variables
 IP_ADDRESS = '127.0.0.1'
+PORT_CONNECTION_PROCEDURE = 16001
 
-# Movement instruction
-frc_joint_motion_dict = {
+# Movement instruction templates
+FRC_JOINT_REPRESENTATION_TEMPLATE_DICT = {
     # "Instruction": "FRC_JointMotionJRep",
     "Instruction": "FRC_JointRelativeJRep",
+    "SequenceID": 0,
     "JointAngle": {
         "J1": 0,
         "J2": 0,
@@ -19,18 +22,37 @@ frc_joint_motion_dict = {
     },
     "SpeedType": "Percent",
     "Speed": 0,
-    "TermType": "FINE",
-    "TermValue": 0,
-    "ACC": None,
-    "OffsetPRNumber": None,
-    "VisionPRNumber": None,
-    "MROT": None,
-    "LCBType": None,
-    "LCBValue": None,
-    "PortType": None,
-    "portNumber": None,
-    "portValue": None,
+    "TermType": "FINE", # FINE or CNT
+    "TermValue": 0, # 1-100
+}
+
+FRC_CARTESIAN_REPRESENTATION_TEMPLATE_DICT = {
+    # "Instruction": "FRC_JointMotion",
+    "Instruction": "FRC_JointRelative",
     "SequenceID": 0,
+    "Configuration": {
+        "UToolNumber": 1,
+        "UFrameNumber": 1,
+        "Front": 1, 
+        "Up": 1,
+        "Left": 0, 
+        "Flip": 1,
+        "Turn4": 0,
+        "Turn5": 0,
+        "Turn6": 0,
+    },
+    "Position": {
+        "X": 0, 
+        "Y": 0, 
+        "Z": 0,
+        "W": 0, 
+        "P": 0, 
+        "R": 0,
+    },
+    "SpeedType": "Percent",
+    "Speed": 0,
+    "TermType": "FINE", # FINE or CNT
+    "TermValue": 0, # 1-100
 }
 
 
@@ -49,19 +71,46 @@ def rmi_read(sock: socket.socket) -> dict:
 
     return message
 
-def move_robot_joint_relative(sock: socket.socket, sequence: int, j1: float = 0.0, j2: float = 0.0, j3: float = 0.0, 
-                        j4: float = 0.0, j5: float = 0.0, j6: float = 0.0, speed: int = 50):
+def move_robot_joint_representation(sock: socket.socket, sequence: int, is_motion_relative: bool = False, 
+                        j1: float = 0.0, j2: float = 0.0, j3: float = 0.0, 
+                        j4: float = 0.0, j5: float = 0.0, j6: float = 0.0, 
+                        speed: int = 100) -> int:
 
-    motion_dict = copy.deepcopy(frc_joint_motion_dict)
+    motion_dict = copy.deepcopy(FRC_JOINT_REPRESENTATION_TEMPLATE_DICT)
 
-    # Adjust position
+    motion_dict["Instruction"] = "FRC_JointRelativeJRep" if is_motion_relative else "FRC_JointMotionJRep"
+    motion_dict["SequenceID"] = sequence
     motion_dict["JointAngle"]["J1"] = j1
     motion_dict["JointAngle"]["J2"] = j2
     motion_dict["JointAngle"]["J3"] = j3
     motion_dict["JointAngle"]["J4"] = j4
     motion_dict["JointAngle"]["J5"] = j5
     motion_dict["JointAngle"]["J6"] = j6
+    motion_dict["Speed"] = speed
+
+    motion_json = json.dumps(motion_dict, indent=2)
+    motion_json = motion_json + "\r\n"
+
+    rmi_send(sock, motion_json)
+    rmi_read(sock)
+
+    return sequence + 1
+
+def move_robot_cartesian_representation(sock: socket.socket, sequence: int, is_motion_relative: bool = False, 
+                        x: float = 0.0, y: float = 0.0, z: float = 0.0, 
+                        w: float = 0.0, p: float = 0.0, r: float = 0.0, 
+                        speed: int = 100) -> int:
+
+    motion_dict = copy.deepcopy(FRC_CARTESIAN_REPRESENTATION_TEMPLATE_DICT)
+
+    motion_dict["Instruction"] = "FRC_JointRelative" if is_motion_relative else "FRC_JointMotion"
     motion_dict["SequenceID"] = sequence
+    motion_dict["Position"]["X"] = x
+    motion_dict["Position"]["Y"] = y
+    motion_dict["Position"]["Z"] = z
+    motion_dict["Position"]["W"] = w
+    motion_dict["Position"]["P"] = p
+    motion_dict["Position"]["R"] = r
     motion_dict["Speed"] = speed
 
     motion_json = json.dumps(motion_dict, indent=2)
@@ -76,7 +125,7 @@ def move_robot_joint_relative(sock: socket.socket, sequence: int, j1: float = 0.
 
 def test_robot_motion_interface():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s1:
-        s1.connect((IP_ADDRESS, 16001))
+        s1.connect((IP_ADDRESS, PORT_CONNECTION_PROCEDURE))
         rmi_send(s1, '{"Communication": "FRC_Connect"}\r\n')
         msg = rmi_read(s1)
         
@@ -93,6 +142,13 @@ def test_robot_motion_interface():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s2:
         s2.connect((IP_ADDRESS, port_num))
 
+        rmi_send(s2, '{"Command" : "FRC_ReadError" } \r\n')
+        msg = rmi_read(s2)
+        time.sleep(5)
+        rmi_send(s2, '{"Command" : "FRC_GetStatus"} \r\n')
+        msg = rmi_read(s2)
+        time.sleep(5)
+        
         error_id = 1
         while error_id:
             rmi_send(s2, '{"Command": "FRC_Initialize"}\r\n')
@@ -112,20 +168,29 @@ def test_robot_motion_interface():
 
         time.sleep(10)
         sequence = 1 # ID of the motion command in RMI sequence
-        sequence = move_robot_joint_relative(s2, sequence, j1=10.0)
+        sequence = move_robot_joint_representation(s2, sequence, is_motion_relative=True, j1=10.0)
         time.sleep(3)
-        sequence = move_robot_joint_relative(s2, sequence, j3=10.0)
+        sequence = move_robot_joint_representation(s2, sequence, is_motion_relative=True, j3=10.0)
         time.sleep(3)
-        sequence = move_robot_joint_relative(s2, sequence, j1=-10.0)
+        sequence = move_robot_joint_representation(s2, sequence, is_motion_relative=True, j1=-10.0)
         time.sleep(3)
-        sequence = move_robot_joint_relative(s2, sequence, j3=-10.0)
+        sequence = move_robot_joint_representation(s2, sequence, is_motion_relative=True, j3=-10.0)
         time.sleep(3)
 
-        for i in range(3):
-            sequence = move_robot_joint_relative(s2, sequence, j1=20.0, speed=100)
-            sequence = move_robot_joint_relative(s2, sequence, j3=-20.0, speed=100)
-            sequence = move_robot_joint_relative(s2, sequence, j1=-20.0, speed=100)
-            sequence = move_robot_joint_relative(s2, sequence, j3=20.0, speed=100)
+        rmi_send(s2, '{"Command" : "FRC_SetOverRide", "Value" : 100 } \r\n')
+        msg = rmi_read(s2)
+        
+        for _ in range(2):
+            sequence = move_robot_joint_representation(s2, sequence, is_motion_relative=True, j1=20.0)
+            sequence = move_robot_joint_representation(s2, sequence, is_motion_relative=True, j3=-20.0)
+            sequence = move_robot_joint_representation(s2, sequence, is_motion_relative=True, j1=-20.0)
+            sequence = move_robot_joint_representation(s2, sequence, is_motion_relative=True, j3=20.0)
+
+        # time.sleep(10)
+        # sequence = move_robot_cartesian_representation(s2, sequence, is_motion_relative = True, x = 100) 
+        # time.sleep(3)
+        # sequence = move_robot_cartesian_representation(s2, sequence, is_motion_relative = True, x = -100) 
+        # time.sleep(10)
 
         rmi_send(s2, '{"Command": "FRC_Abort"}\r\n')
         rmi_read(s2)

@@ -32,11 +32,11 @@ FRC_CARTESIAN_REPRESENTATION_TEMPLATE_DICT = {
     "SequenceID": 0,
     "Configuration": {
         "UToolNumber": 1,
-        "UFrameNumber": 1,
+        "UFrameNumber": 7,
         "Front": 1, 
         "Up": 1,
         "Left": 0, 
-        "Flip": 1,
+        "Flip": 0,
         "Turn4": 0,
         "Turn5": 0,
         "Turn6": 0,
@@ -74,7 +74,7 @@ def rmi_read(sock: socket.socket) -> dict:
 def move_robot_joint_representation(sock: socket.socket, sequence: int, is_motion_relative: bool = False, 
                         j1: float = 0.0, j2: float = 0.0, j3: float = 0.0, 
                         j4: float = 0.0, j5: float = 0.0, j6: float = 0.0, 
-                        speed: int = 100) -> int:
+                        speed: int = 100, accuracy: str = 'FINE') -> int:
 
     motion_dict = copy.deepcopy(FRC_JOINT_REPRESENTATION_TEMPLATE_DICT)
 
@@ -87,6 +87,8 @@ def move_robot_joint_representation(sock: socket.socket, sequence: int, is_motio
     motion_dict["JointAngle"]["J5"] = j5
     motion_dict["JointAngle"]["J6"] = j6
     motion_dict["Speed"] = speed
+    motion_dict["TermType"] = "CNT" if accuracy == "CNT" else "FINE" # FINE or CNT
+    motion_dict["TermValue"] = 100 if accuracy == "CNT" else 0 # 1-100
 
     motion_json = json.dumps(motion_dict, indent=2)
     motion_json = motion_json + "\r\n"
@@ -99,7 +101,7 @@ def move_robot_joint_representation(sock: socket.socket, sequence: int, is_motio
 def move_robot_cartesian_representation(sock: socket.socket, sequence: int, is_motion_relative: bool = False, 
                         x: float = 0.0, y: float = 0.0, z: float = 0.0, 
                         w: float = 0.0, p: float = 0.0, r: float = 0.0, 
-                        speed: int = 100) -> int:
+                        speed: int = 100, accuracy: str = 'FINE') -> int:
 
     motion_dict = copy.deepcopy(FRC_CARTESIAN_REPRESENTATION_TEMPLATE_DICT)
 
@@ -111,7 +113,16 @@ def move_robot_cartesian_representation(sock: socket.socket, sequence: int, is_m
     motion_dict["Position"]["W"] = w
     motion_dict["Position"]["P"] = p
     motion_dict["Position"]["R"] = r
+    motion_dict["Configuration"]["Front"] = 1
+    motion_dict["Configuration"]["Up"] = 1
+    motion_dict["Configuration"]["Left"] = 0
+    motion_dict["Configuration"]["Flip"] = 0
+    motion_dict["Configuration"]["Turn4"] = 0
+    motion_dict["Configuration"]["Turn5"] = 0
+    motion_dict["Configuration"]["Turn6"] = 0
     motion_dict["Speed"] = speed
+    motion_dict["TermType"] = "CNT" if accuracy == "CNT" else "FINE" # FINE or CNT
+    motion_dict["TermValue"] = 100 if accuracy == "CNT" else 0 # 1-100
 
     motion_json = json.dumps(motion_dict, indent=2)
     motion_json = motion_json + "\r\n"
@@ -142,12 +153,27 @@ def test_robot_motion_interface():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s2:
         s2.connect((IP_ADDRESS, port_num))
 
-        rmi_send(s2, '{"Command" : "FRC_ReadError" } \r\n')
-        msg = rmi_read(s2)
-        time.sleep(5)
-        rmi_send(s2, '{"Command" : "FRC_GetStatus"} \r\n')
-        msg = rmi_read(s2)
-        time.sleep(5)
+        time.sleep(1)
+        rmi_send(s2, '{"Command": "FRC_Abort"}\r\n')
+        rmi_read(s2)
+        time.sleep(1)
+
+        # rmi_send(s2, '{"Command" : "FRC_ReadError" } \r\n')
+        # msg = rmi_read(s2)
+        # time.sleep(1)
+
+        # rmi_send(s2, '{"Command" : "FRC_GetStatus"} \r\n')
+        # msg = rmi_read(s2)
+        # time.sleep(1)
+        # "TPMode": 0, - ok, "TPMode": 1, enabled
+
+        # rmi_send(s2, '{"Command": "FRC_ReadCartesianPosition"}\r\n')
+        # rmi_read(s2)
+        # time.sleep(1)
+
+        # rmi_send(s2, '{"Command": "FRC_ReadJointAngles"}\r\n')
+        # rmi_read(s2)
+        # time.sleep(1)
         
         error_id = 1
         while error_id:
@@ -160,38 +186,63 @@ def test_robot_motion_interface():
                 print("ERROR: 7126 - :)")
             elif error_id == 2556936:
                 print("ERROR: 2556936 - TP enabled")
+            elif error_id == 2556937:
+                print("ERROR: 2556937 - some errors on TP???")
             elif error_id == 2556943:
                 print("ERROR: 2556943 - Last connection was not aborted")
+            elif error_id == 2556956:
+                print("ERROR: 2556956 - motion aborted???")
             elif error_id == 2556957:
                 print("ERROR: 2556957 - Invalid SequenceID")
             time.sleep(5)
 
-        time.sleep(10)
+        # go to start position
         sequence = 1 # ID of the motion command in RMI sequence
-        sequence = move_robot_joint_representation(s2, sequence, is_motion_relative=True, j1=10.0)
-        time.sleep(3)
-        sequence = move_robot_joint_representation(s2, sequence, is_motion_relative=True, j3=10.0)
-        time.sleep(3)
-        sequence = move_robot_joint_representation(s2, sequence, is_motion_relative=True, j1=-10.0)
-        time.sleep(3)
-        sequence = move_robot_joint_representation(s2, sequence, is_motion_relative=True, j3=-10.0)
-        time.sleep(3)
+        rmi_send(s2, '{"Command" : "FRC_SetOverRide", "Value" : 10 } \r\n')
+        rmi_read(s2)
+        sequence = move_robot_joint_representation(s2, sequence, 
+                                            j1=-40.0, j2=5.0, j3=-30.0, j4=-90.0, j5=-80.0, j6=100.0)
+        time.sleep(1)
+        rmi_send(s2, '{"Command" : "FRC_SetOverRide", "Value" : 50 } \r\n')
+        rmi_read(s2)
 
-        rmi_send(s2, '{"Command" : "FRC_SetOverRide", "Value" : 100 } \r\n')
-        msg = rmi_read(s2)
-        
-        for _ in range(2):
-            sequence = move_robot_joint_representation(s2, sequence, is_motion_relative=True, j1=20.0)
-            sequence = move_robot_joint_representation(s2, sequence, is_motion_relative=True, j3=-20.0)
-            sequence = move_robot_joint_representation(s2, sequence, is_motion_relative=True, j1=-20.0)
-            sequence = move_robot_joint_representation(s2, sequence, is_motion_relative=True, j3=20.0)
-
-        # time.sleep(10)
-        # sequence = move_robot_cartesian_representation(s2, sequence, is_motion_relative = True, x = 100) 
+        # sequence = move_robot_joint_representation(s2, sequence, is_motion_relative=True, j1=10.0)
         # time.sleep(3)
-        # sequence = move_robot_cartesian_representation(s2, sequence, is_motion_relative = True, x = -100) 
-        # time.sleep(10)
+        # sequence = move_robot_joint_representation(s2, sequence, is_motion_relative=True, j3=10.0)
+        # time.sleep(3)
+        # sequence = move_robot_joint_representation(s2, sequence, is_motion_relative=True, j1=-10.0)
+        # time.sleep(3)
+        # sequence = move_robot_joint_representation(s2, sequence, is_motion_relative=True, j3=-10.0)
+        # time.sleep(3)
+        
+        for _ in range(3):
+            # sequence = move_robot_joint_representation(s2, sequence, is_motion_relative=True, j1=20.0, accuracy='CNT')
+            # sequence = move_robot_joint_representation(s2, sequence, is_motion_relative=True, j3=-20.0, accuracy='CNT')
+            # sequence = move_robot_joint_representation(s2, sequence, is_motion_relative=True, j1=-20.0, accuracy='CNT')
+            # sequence = move_robot_joint_representation(s2, sequence, is_motion_relative=True, j3=20.0, accuracy='CNT')
 
+            sequence = move_robot_cartesian_representation(s2, sequence, is_motion_relative=True, x=200.0, accuracy='CNT')
+            sequence = move_robot_cartesian_representation(s2, sequence, is_motion_relative=True, y=200.0, accuracy='CNT')
+            sequence = move_robot_cartesian_representation(s2, sequence, is_motion_relative=True, x=-200.0, accuracy='CNT')
+            sequence = move_robot_cartesian_representation(s2, sequence, is_motion_relative=True, y=-200.0, accuracy='CNT')
+
+            # sequence = move_robot_cartesian_representation(s2, sequence, is_motion_relative=True, w=10.0)
+            # sequence = move_robot_cartesian_representation(s2, sequence, is_motion_relative=True, w=-10.0)
+            # sequence = move_robot_cartesian_representation(s2, sequence, is_motion_relative=True, p=10.0)
+            # sequence = move_robot_cartesian_representation(s2, sequence, is_motion_relative=True, p=-10.0)
+            # sequence = move_robot_cartesian_representation(s2, sequence, is_motion_relative=True, r=10.0)
+            # sequence = move_robot_cartesian_representation(s2, sequence, is_motion_relative=True, r=-10.0)
+
+            # sequence = move_robot_cartesian_representation(s2, sequence, 
+            #                           x=640.0, y=-50.0, z=300.0, w=-100.0, p=-70.0, r=-35.0, accuracy='CNT')
+            # sequence = move_robot_cartesian_representation(s2, sequence, 
+            #                           x=640.0, y=-50.0, z=400.0, w=-100.0, p=-70.0, r=-35.0, accuracy='CNT')
+            # sequence = move_robot_cartesian_representation(s2, sequence, 
+            #                           x=640.0, y=-150.0, z=400.0, w=-100.0, p=-70.0, r=-35.0, accuracy='CNT')
+            # sequence = move_robot_cartesian_representation(s2, sequence, 
+            #                           x=640.0, y=-150.0, z=300.0, w=-100.0, p=-70.0, r=-35.0, accuracy='CNT')
+
+        time.sleep(3)
         rmi_send(s2, '{"Command": "FRC_Abort"}\r\n')
         rmi_read(s2)
         time.sleep(3)

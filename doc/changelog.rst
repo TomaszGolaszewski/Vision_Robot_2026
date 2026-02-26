@@ -1,6 +1,10 @@
 Changelog
 ======
 
+v0.1.9 - 26.02.2026 
+------
+* Updated robot motion interface after testing on real robot.
+
 v0.1.8 - 22.02.2026 
 ------
 * Added QR code position (x, y, z) calculation relative to the camera.

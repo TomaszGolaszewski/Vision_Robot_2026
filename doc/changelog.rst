@@ -1,6 +1,15 @@
 Changelog
 ======
 
+
+v0.2.0 - 26.02.2026 
+------
+* Prepared skeleton of the main program.
+
+v0.2 - Proof of concept with 3 DOF (x, y, z)
+======
+
+
 v0.1.9 - 26.02.2026 
 ------
 * Updated robot motion interface after testing on real robot.

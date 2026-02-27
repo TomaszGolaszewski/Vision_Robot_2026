@@ -61,7 +61,9 @@ def rmi_send(sock: socket.socket, message: str) -> None:
     sock.send(message.encode())
 
 def rmi_read(sock: socket.socket) -> dict: 
-    """Receive and decode a JSON message from an RMI socket."""
+    """Receive and decode a JSON message from an RMI socket.
+    Return: error_id nad message.
+    """
     data = sock.recv(1024)
     # print(data)
     message = json.loads(data)
@@ -69,7 +71,21 @@ def rmi_read(sock: socket.socket) -> dict:
     message_decoded = json.dumps(message, indent=2)
     print(message_decoded)
 
-    return message
+    error_id = message["ErrorID"]
+    if error_id == 7126:
+        print("ERROR: 7126 - :)")
+    elif error_id == 2556936:
+        print("ERROR: 2556936 - TP enabled")
+    elif error_id == 2556937:
+        print("ERROR: 2556937 - some errors on TP???")
+    elif error_id == 2556943:
+        print("ERROR: 2556943 - Last connection was not aborted")
+    elif error_id == 2556956:
+        print("ERROR: 2556956 - motion aborted???")
+    elif error_id == 2556957:
+        print("ERROR: 2556957 - Invalid SequenceID")
+
+    return error_id, message
 
 def move_robot_joint_representation(sock: socket.socket, sequence: int, is_motion_relative: bool = False, 
                         j1: float = 0.0, j2: float = 0.0, j3: float = 0.0, 
@@ -138,9 +154,8 @@ def test_robot_motion_interface():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s1:
         s1.connect((IP_ADDRESS, PORT_CONNECTION_PROCEDURE))
         rmi_send(s1, '{"Communication": "FRC_Connect"}\r\n')
-        msg = rmi_read(s1)
-        
-        error_id = msg["ErrorID"]
+        error_id, msg = rmi_read(s1)
+
         if error_id == 0:
             print("Connected")
 
@@ -178,23 +193,12 @@ def test_robot_motion_interface():
         error_id = 1
         while error_id:
             rmi_send(s2, '{"Command": "FRC_Initialize"}\r\n')
-            msg = rmi_read(s2)
-            error_id = msg["ErrorID"]
+            error_id, msg = rmi_read(s2)
             if error_id == 0:
                 print("Initialized")
-            elif error_id == 7126:
-                print("ERROR: 7126 - :)")
-            elif error_id == 2556936:
-                print("ERROR: 2556936 - TP enabled")
-            elif error_id == 2556937:
-                print("ERROR: 2556937 - some errors on TP???")
-            elif error_id == 2556943:
-                print("ERROR: 2556943 - Last connection was not aborted")
-            elif error_id == 2556956:
-                print("ERROR: 2556956 - motion aborted???")
-            elif error_id == 2556957:
-                print("ERROR: 2556957 - Invalid SequenceID")
-            time.sleep(5)
+                time.sleep(1)
+            else:
+                time.sleep(5)
 
         # go to start position
         sequence = 1 # ID of the motion command in RMI sequence
@@ -215,7 +219,7 @@ def test_robot_motion_interface():
         # sequence = move_robot_joint_representation(s2, sequence, is_motion_relative=True, j3=-10.0)
         # time.sleep(3)
         
-        for _ in range(3):
+        for _ in range(5):
             # sequence = move_robot_joint_representation(s2, sequence, is_motion_relative=True, j1=20.0, accuracy='CNT')
             # sequence = move_robot_joint_representation(s2, sequence, is_motion_relative=True, j3=-20.0, accuracy='CNT')
             # sequence = move_robot_joint_representation(s2, sequence, is_motion_relative=True, j1=-20.0, accuracy='CNT')
@@ -245,7 +249,7 @@ def test_robot_motion_interface():
         time.sleep(3)
         rmi_send(s2, '{"Command": "FRC_Abort"}\r\n')
         rmi_read(s2)
-        time.sleep(3)
+        time.sleep(1)
         rmi_send(s2, '{"Communication": "FRC_Disconnect"}\r\n')
         rmi_read(s2)
 

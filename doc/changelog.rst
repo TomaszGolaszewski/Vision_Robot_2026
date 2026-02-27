@@ -1,6 +1,9 @@
 Changelog
 ======
 
+v0.2.2 - 27.02.2026 
+------
+* Prepared resources for further tests with the robot.
 
 v0.2.1 - 27.02.2026 
 ------

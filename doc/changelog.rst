@@ -2,6 +2,11 @@ Changelog
 ======
 
 
+v0.2.1 - 27.02.2026 
+------
+* Added stabilization of found coordinates;
+* Added minor improvements to the stabilization algorithm.
+
 v0.2.0 - 26.02.2026 
 ------
 * Prepared skeleton of the main program.

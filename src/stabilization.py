@@ -4,11 +4,12 @@ import numpy as np
 
 class PointStabilized:
 
-    def __init__(self, coordinates: tuple, history_depth: int = 5, lifespan: int = 10):
+    def __init__(self, coordinates: tuple, history_depth: int = 5, lifespan: int = 10, valid_min_history: int = 3):
         self.coord = coordinates
         self.dimension = len(coordinates)
         self.history_coord = [coordinates]
         self.history_depth = history_depth
+        self.valid_min_history = valid_min_history
         self.lifespan = lifespan
         self.health = lifespan
 
@@ -63,7 +64,8 @@ def handle_stabilized_points(blob_objects_list: list, found_coord_list: list) ->
 
     # prepare new list of objects coordinates
     # filter added to not show very new objects
-    stabilized_found_coord_list = [blob.coord for blob in filter(lambda x: len(x.history_coord) > 3, blob_objects_list)]
+    stabilized_found_coord_list = [blob.coord for blob in filter(
+                            lambda x: len(x.history_coord) > x.valid_min_history, blob_objects_list)]
 
     return blob_objects_list, stabilized_found_coord_list
 

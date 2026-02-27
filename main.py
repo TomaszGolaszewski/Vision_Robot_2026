@@ -22,10 +22,12 @@ else:
     path.append('.\\src')
     print("other")
 
-from vision_QR import calculate_object_position_3_dof
 from robot_motion_interface import *
+from stabilization import handle_stabilized_points
+from vision_QR import calculate_object_position_3_dof
 
 CONNECTION_INTERVAL = 0.5
+QR_TEXT = '001'
 
 
 def run():
@@ -34,6 +36,9 @@ def run():
     i = 0
     last_time_fps = time.time()
     last_time_connection = time.time()
+
+    # additional variables
+    list_with_stabilized_objects = []
 
     # initializing QR code detector
     qr_detect = cv2.QRCodeDetector()
@@ -52,16 +57,21 @@ def run():
         image_processed = image_original_frame.copy()
 
         # detect QR codes
-        is_code, vertices_coords = qr_detect.detect(image_original_frame)
+        decoded_text, vertices_coords, binarized_straight_qrcode = qr_detect.detectAndDecode(image_original_frame)
 
-        if is_code:
-            x, y, z = calculate_object_position_3_dof(vertices_coords[0])
-            print("---")
-            print(x, y, z)
-            print("{:.2f}".format(x), "{:.2f}".format(y), "{:.2f}".format(z))
+        if decoded_text[:3] == QR_TEXT:
+            raw_coord = calculate_object_position_3_dof(vertices_coords[0])
+            # x, y, z = raw_coord
+            # print("{:.2f}".format(x), "{:.2f}".format(y), "{:.2f}".format(z))
 
+            list_with_stabilized_objects, stabilized_coords = handle_stabilized_points(
+                                                                list_with_stabilized_objects, [raw_coord]) 
             # draw outlines of the codes
             image_processed = cv2.polylines(image_original_frame, vertices_coords.astype(int), True, (0, 255, 0), 3)
+
+        else:
+            list_with_stabilized_objects, stabilized_coords = handle_stabilized_points(
+                                                                list_with_stabilized_objects, [])
 
         # draw window
         cv2.imshow("QR Detection in Real-TIme", image_processed)
@@ -70,6 +80,7 @@ def run():
         if time.time() > last_time_connection + CONNECTION_INTERVAL:
             last_time_connection = time.time()
             print("conn")
+            print(stabilized_coords[0] if len(stabilized_coords) else 0)
 
         # measure time
         if time.time() > last_time_fps + 1:

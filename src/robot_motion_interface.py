@@ -55,6 +55,7 @@ FRC_CARTESIAN_REPRESENTATION_TEMPLATE_DICT = {
     "TermValue": 0, # 1-100
 }
 
+# ===== CONNECTION =======================================================================
 
 def rmi_send(sock: socket.socket, message: str) -> None: 
     """Encode and send a message over an RMI socket."""
@@ -75,17 +76,74 @@ def rmi_read(sock: socket.socket) -> dict:
     if error_id == 7126:
         print("ERROR: 7126 - :)")
     elif error_id == 2556936:
-        print("ERROR: 2556936 - TP enabled")
+        print("ERROR: 2556936 - TP enabled!")
     elif error_id == 2556937:
         print("ERROR: 2556937 - some errors on TP???")
     elif error_id == 2556943:
-        print("ERROR: 2556943 - Last connection was not aborted")
+        print("ERROR: 2556943 - Last connection was not aborted!")
     elif error_id == 2556956:
         print("ERROR: 2556956 - motion aborted???")
     elif error_id == 2556957:
-        print("ERROR: 2556957 - Invalid SequenceID")
+        print("ERROR: 2556957 - Invalid SequenceID or RMI_MOVE program is open!")
 
     return error_id, message
+
+
+def initialize_connection() -> socket.socket:
+
+    # get port to create connection
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s1:
+        s1.connect((IP_ADDRESS, PORT_CONNECTION_PROCEDURE))
+        rmi_send(s1, '{"Communication": "FRC_Connect"}\r\n')
+        error_id, msg = rmi_read(s1)
+
+        if error_id == 0:
+            print("Connected")
+
+        # read port num  
+        port_num = msg["PortNumber"]
+    time.sleep(1)
+
+    # create new socket
+    s2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s2.connect((IP_ADDRESS, port_num))
+    time.sleep(1)
+
+    # cancel old commands
+    rmi_send(s2, '{"Command": "FRC_Abort"}\r\n')
+    rmi_read(s2)
+    time.sleep(1)
+
+    # initialize connection
+    error_id = 1
+    while error_id:
+        rmi_send(s2, '{"Command": "FRC_Initialize"}\r\n')
+        error_id, msg = rmi_read(s2)
+        if error_id == 0:
+            print("Initialized")
+            time.sleep(1)
+        else:
+            time.sleep(2)
+
+    return s2
+
+def close_connection(sock: socket.socket):
+
+    # cancel all commands
+    time.sleep(1)
+    rmi_send(sock, '{"Command": "FRC_Abort"}\r\n')
+    rmi_read(sock)
+
+    # close the connection on robot side
+    time.sleep(1)
+    rmi_send(sock, '{"Communication": "FRC_Disconnect"}\r\n')
+    rmi_read(sock)
+
+    # close the connection on our side
+    time.sleep(1)
+    sock.close()
+
+# ===== MOVEMENT =======================================================================
 
 def move_robot_joint_representation(sock: socket.socket, sequence: int, is_motion_relative: bool = False, 
                         j1: float = 0.0, j2: float = 0.0, j3: float = 0.0, 
@@ -148,9 +206,32 @@ def move_robot_cartesian_representation(sock: socket.socket, sequence: int, is_m
 
     return sequence + 1
 
-# ===== TESTS =================================================
+# ===== TESTS =======================================================================
 
 def test_robot_motion_interface():
+
+    sock = initialize_connection()
+
+     # go to start position
+    sequence = 1 # ID of the motion command in RMI sequence
+    rmi_send(sock, '{"Command" : "FRC_SetOverRide", "Value" : 10 } \r\n')
+    rmi_read(sock)
+    sequence = move_robot_joint_representation(sock, sequence, 
+                                        j1=-40.0, j2=5.0, j3=-30.0, j4=-90.0, j5=-80.0, j6=100.0)
+    time.sleep(1)
+    rmi_send(sock, '{"Command" : "FRC_SetOverRide", "Value" : 50 } \r\n')
+    rmi_read(sock)
+
+    for _ in range(2):
+        sequence = move_robot_cartesian_representation(sock, sequence, is_motion_relative=True, x=200.0, accuracy='CNT')
+        sequence = move_robot_cartesian_representation(sock, sequence, is_motion_relative=True, y=200.0, accuracy='CNT')
+        sequence = move_robot_cartesian_representation(sock, sequence, is_motion_relative=True, x=-200.0, accuracy='CNT')
+        sequence = move_robot_cartesian_representation(sock, sequence, is_motion_relative=True, y=-200.0, accuracy='CNT')
+
+    close_connection(sock)
+
+
+def test_robot_motion_interface_old():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s1:
         s1.connect((IP_ADDRESS, PORT_CONNECTION_PROCEDURE))
         rmi_send(s1, '{"Communication": "FRC_Connect"}\r\n')

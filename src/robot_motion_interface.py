@@ -2,6 +2,7 @@ import socket
 import time
 import json
 import copy
+import random
 
 # Global variables
 IP_ADDRESS = '127.0.0.1'
@@ -208,30 +209,49 @@ def move_robot_cartesian_representation(sock: socket.socket, sequence: int, is_m
 
 # ===== TESTS =======================================================================
 
-def test_robot_motion_interface():
+def print_robot_position():
+    """Connect to the robot and read its current joint and Cartesian position."""
+    sock = initialize_connection()
+    time.sleep(1)
+    rmi_send(sock, '{"Command": "FRC_ReadJointAngles"}\r\n')
+    rmi_read(sock)
+    time.sleep(1)
+    rmi_send(sock, '{"Command": "FRC_ReadCartesianPosition"}\r\n')
+    rmi_read(sock)
+    time.sleep(1)
+    close_connection(sock)
 
+def test_robot_motion_interface():
+    """Test of the prepared interface for connecting with the robot and its advanced functions."""
     sock = initialize_connection()
 
-     # go to start position
+    # go to start position
     sequence = 1 # ID of the motion command in RMI sequence
     rmi_send(sock, '{"Command" : "FRC_SetOverRide", "Value" : 10 } \r\n')
     rmi_read(sock)
     sequence = move_robot_joint_representation(sock, sequence, 
-                                        j1=-40.0, j2=5.0, j3=-30.0, j4=-90.0, j5=-80.0, j6=100.0)
+                                        j1=-50, j2=25.0, j3=-40.0, j4=-118.0, j5=-61.0, j6=-11)
     time.sleep(1)
     rmi_send(sock, '{"Command" : "FRC_SetOverRide", "Value" : 50 } \r\n')
     rmi_read(sock)
 
-    for _ in range(2):
-        sequence = move_robot_cartesian_representation(sock, sequence, is_motion_relative=True, x=200.0, accuracy='CNT')
-        sequence = move_robot_cartesian_representation(sock, sequence, is_motion_relative=True, y=200.0, accuracy='CNT')
-        sequence = move_robot_cartesian_representation(sock, sequence, is_motion_relative=True, x=-200.0, accuracy='CNT')
-        sequence = move_robot_cartesian_representation(sock, sequence, is_motion_relative=True, y=-200.0, accuracy='CNT')
+    for _ in range(20):
+        r = random.randint(1, 3)
+        sign = random.randint(0, 1)
+        if not sign: sign = -1
+        
+        if r == 1:
+            sequence = move_robot_cartesian_representation(sock, sequence, is_motion_relative=True, x=sign*5.0) #, accuracy='CNT')
+        elif r == 2:
+            sequence = move_robot_cartesian_representation(sock, sequence, is_motion_relative=True, y=sign*5.0) #, accuracy='CNT')
+        else:
+            sequence = move_robot_cartesian_representation(sock, sequence, is_motion_relative=True, z=sign*5.0) #, accuracy='CNT')
 
     close_connection(sock)
 
 
 def test_robot_motion_interface_old():
+    """Test connection with the robot and its functions."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s1:
         s1.connect((IP_ADDRESS, PORT_CONNECTION_PROCEDURE))
         rmi_send(s1, '{"Communication": "FRC_Connect"}\r\n')
@@ -335,4 +355,5 @@ def test_robot_motion_interface_old():
         rmi_read(s2)
 
 if __name__ == "__main__":
+    # get_robot_position()
     test_robot_motion_interface()

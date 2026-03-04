@@ -1,6 +1,9 @@
 Changelog
 ======
 
+v0.2.4 - 04.03.2026
+------
+* Updated robot motion interface after testing on real robot.
 
 v0.2.3 - 02.03.2026 
 ------

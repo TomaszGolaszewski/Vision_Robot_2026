@@ -26,8 +26,11 @@ from robot_motion_interface import *
 from stabilization import handle_stabilized_points
 from vision_QR import calculate_object_position_3_dof
 
+
+TEST_RUN = True # flag for tests
 CONNECTION_INTERVAL = 0.5
 QR_TEXT = '001'
+QR_POSITION = [70.0, 15.0, 110.0] # [x, y, z]
 
 
 def run():
@@ -39,6 +42,8 @@ def run():
 
     # additional variables
     list_with_stabilized_objects = []
+    last_qr_coord = [0, 0, 0]
+    sequence = 1 # ID of the motion command in RMI sequence
 
     # initializing QR code detector
     qr_detect = cv2.QRCodeDetector()
@@ -49,6 +54,11 @@ def run():
         print("Cannot open camera!")
         exit()
 
+    if not TEST_RUN:
+        sock = initialize_connection()
+        # go to start position
+        sequence = home_robot(sock, sequence)
+    
     # start a while loop
     while(True):
 
@@ -79,8 +89,16 @@ def run():
         # connection
         if time.time() > last_time_connection + CONNECTION_INTERVAL:
             last_time_connection = time.time()
-            print("conn")
-            print(stabilized_coords[0] if len(stabilized_coords) else 0)
+
+            if len(stabilized_coords):
+                last_qr_coord = stabilized_coords[0]
+            print(last_qr_coord)
+            # position_offset = QR_POSITION - last_qr_coord
+            position_offset = [round(float(q1 - q2), 2) for (q1, q2) in zip(QR_POSITION, last_qr_coord)]
+            print(position_offset)
+            if not TEST_RUN:
+                sequence = move_robot_cartesian_representation(sock, sequence, is_motion_relative=True, 
+                                                x=position_offset[0], y=position_offset[1], z=position_offset[2])
 
         # measure time
         if time.time() > last_time_fps + 1:
@@ -95,6 +113,8 @@ def run():
             break
     
     # clean up
+    if not TEST_RUN:
+        close_connection(sock)
     webcam.release()
     cv2.destroyAllWindows()
 

@@ -67,25 +67,30 @@ def rmi_read(sock: socket.socket) -> dict:
     Return: error_id nad message.
     """
     data = sock.recv(1024)
-    # print(data)
-    message = json.loads(data)
-    # print(message)
-    message_decoded = json.dumps(message, indent=2)
-    print(message_decoded)
 
-    error_id = message["ErrorID"]
-    if error_id == 7126:
-        print("ERROR: 7126 - :)")
-    elif error_id == 2556936:
-        print("ERROR: 2556936 - TP enabled!")
-    elif error_id == 2556937:
-        print("ERROR: 2556937 - some errors on TP???")
-    elif error_id == 2556943:
-        print("ERROR: 2556943 - Last connection was not aborted!")
-    elif error_id == 2556956:
-        print("ERROR: 2556956 - motion aborted???")
-    elif error_id == 2556957:
-        print("ERROR: 2556957 - Invalid SequenceID or RMI_MOVE program is open!")
+    messages = [] 
+    for line in data.splitlines(): 
+        if line.strip(): 
+            message = json.loads(line)
+
+            error_id = message["ErrorID"]
+            if error_id == 7126:
+                print("ERROR: 7126 - :)")
+            elif error_id == 2556936:
+                print("ERROR: 2556936 - TP enabled!")
+            elif error_id == 2556937:
+                print("ERROR: 2556937 - some errors on TP???")
+            elif error_id == 2556943:
+                print("ERROR: 2556943 - Last connection was not aborted!")
+            elif error_id == 2556956:
+                print("ERROR: 2556956 - motion aborted???")
+            elif error_id == 2556957:
+                print("ERROR: 2556957 - Invalid SequenceID, length of path equals zero or RMI_MOVE program is open!")
+
+            messages.append(message) 
+
+    message_decoded = json.dumps(messages, indent=2)
+    print(message_decoded)
 
     return error_id, message
 
@@ -113,7 +118,7 @@ def initialize_connection() -> socket.socket:
     # cancel old commands
     rmi_send(s2, '{"Command": "FRC_Abort"}\r\n')
     rmi_read(s2)
-    time.sleep(1)
+    time.sleep(0.5)
 
     # initialize connection
     error_id = 1
@@ -122,7 +127,7 @@ def initialize_connection() -> socket.socket:
         error_id, msg = rmi_read(s2)
         if error_id == 0:
             print("Initialized")
-            time.sleep(1)
+            time.sleep(0.5)
         else:
             time.sleep(2)
 
@@ -131,17 +136,17 @@ def initialize_connection() -> socket.socket:
 def close_connection(sock: socket.socket):
 
     # cancel all commands
-    time.sleep(1)
+    time.sleep(0.5)
     rmi_send(sock, '{"Command": "FRC_Abort"}\r\n')
     rmi_read(sock)
 
     # close the connection on robot side
-    time.sleep(1)
+    time.sleep(0.5)
     rmi_send(sock, '{"Communication": "FRC_Disconnect"}\r\n')
     rmi_read(sock)
 
     # close the connection on our side
-    time.sleep(1)
+    time.sleep(0.5)
     sock.close()
 
 # ===== MOVEMENT =======================================================================
@@ -207,33 +212,38 @@ def move_robot_cartesian_representation(sock: socket.socket, sequence: int, is_m
 
     return sequence + 1
 
-# ===== TESTS =======================================================================
-
-def print_robot_position():
-    """Connect to the robot and read its current joint and Cartesian position."""
-    sock = initialize_connection()
-    time.sleep(1)
-    rmi_send(sock, '{"Command": "FRC_ReadJointAngles"}\r\n')
-    rmi_read(sock)
-    time.sleep(1)
-    rmi_send(sock, '{"Command": "FRC_ReadCartesianPosition"}\r\n')
-    rmi_read(sock)
-    time.sleep(1)
-    close_connection(sock)
-
-def test_robot_motion_interface():
-    """Test of the prepared interface for connecting with the robot and its advanced functions."""
-    sock = initialize_connection()
-
-    # go to start position
-    sequence = 1 # ID of the motion command in RMI sequence
+def home_robot(sock: socket.socket, sequence: int) -> int:
+    """Move the robot to its HOME position."""
     rmi_send(sock, '{"Command" : "FRC_SetOverRide", "Value" : 10 } \r\n')
     rmi_read(sock)
     sequence = move_robot_joint_representation(sock, sequence, 
                                         j1=-50, j2=25.0, j3=-40.0, j4=-118.0, j5=-61.0, j6=-11)
     time.sleep(1)
-    rmi_send(sock, '{"Command" : "FRC_SetOverRide", "Value" : 50 } \r\n')
+    rmi_send(sock, '{"Command" : "FRC_SetOverRide", "Value" : 100 } \r\n')
     rmi_read(sock)
+
+# ===== TESTS =======================================================================
+
+def print_robot_position():
+    """Connect to the robot and read its current joint and Cartesian position."""
+    sock = initialize_connection()
+    time.sleep(0.5)
+    rmi_send(sock, '{"Command": "FRC_ReadJointAngles"}\r\n')
+    rmi_read(sock)
+    time.sleep(0.5)
+    rmi_send(sock, '{"Command": "FRC_ReadCartesianPosition"}\r\n')
+    rmi_read(sock)
+    time.sleep(0.5)
+    close_connection(sock)
+
+
+def test_robot_motion_interface():
+    """Test of the prepared interface for connecting with the robot and its advanced functions."""
+    sock = initialize_connection()
+    sequence = 1 # ID of the motion command in RMI sequence
+
+    # go to start position
+    sequence = home_robot(sock, sequence)
 
     for _ in range(20):
         r = random.randint(1, 3)

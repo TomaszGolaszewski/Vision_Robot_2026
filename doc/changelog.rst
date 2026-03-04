@@ -1,6 +1,12 @@
 Changelog
 ======
 
+v0.2.5 - 04.03.2026 
+------
+* Prepared resources for further tests with the robot:
+    * added robot response parsing,
+    * coupled QR code position detection with robot movement.
+
 v0.2.4 - 04.03.2026
 ------
 * Updated robot motion interface after testing on real robot.

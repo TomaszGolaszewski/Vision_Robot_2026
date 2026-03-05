@@ -154,7 +154,7 @@ def close_connection(sock: socket.socket):
 def move_robot_joint_representation(sock: socket.socket, sequence: int, is_motion_relative: bool = False, 
                         j1: float = 0.0, j2: float = 0.0, j3: float = 0.0, 
                         j4: float = 0.0, j5: float = 0.0, j6: float = 0.0, 
-                        speed: int = 100, accuracy: str = 'FINE') -> int:
+                        speed: int = 100, accuracy: str = 'FINE', wait_for_response: bool = True) -> int:
 
     motion_dict = copy.deepcopy(FRC_JOINT_REPRESENTATION_TEMPLATE_DICT)
 
@@ -174,14 +174,15 @@ def move_robot_joint_representation(sock: socket.socket, sequence: int, is_motio
     motion_json = motion_json + "\r\n"
 
     rmi_send(sock, motion_json)
-    rmi_read(sock)
+    if wait_for_response:
+        rmi_read(sock)
 
     return sequence + 1
 
 def move_robot_cartesian_representation(sock: socket.socket, sequence: int, is_motion_relative: bool = False, 
                         x: float = 0.0, y: float = 0.0, z: float = 0.0, 
                         w: float = 0.0, p: float = 0.0, r: float = 0.0, 
-                        speed: int = 100, accuracy: str = 'FINE') -> int:
+                        speed: int = 100, accuracy: str = 'FINE', wait_for_response: bool = True) -> int:
 
     motion_dict = copy.deepcopy(FRC_CARTESIAN_REPRESENTATION_TEMPLATE_DICT)
 
@@ -208,19 +209,22 @@ def move_robot_cartesian_representation(sock: socket.socket, sequence: int, is_m
     motion_json = motion_json + "\r\n"
 
     rmi_send(sock, motion_json)
-    rmi_read(sock)
+    if wait_for_response:
+        rmi_read(sock)
 
     return sequence + 1
 
-def home_robot(sock: socket.socket, sequence: int) -> int:
+def home_robot(sock: socket.socket, sequence: int, speed: int = 100) -> int:
     """Move the robot to its HOME position."""
     rmi_send(sock, '{"Command" : "FRC_SetOverRide", "Value" : 10 } \r\n')
     rmi_read(sock)
     sequence = move_robot_joint_representation(sock, sequence, 
                                         j1=-50, j2=25.0, j3=-40.0, j4=-118.0, j5=-61.0, j6=-11)
     time.sleep(1)
-    rmi_send(sock, '{"Command" : "FRC_SetOverRide", "Value" : 100 } \r\n')
+    rmi_send(sock, '{"Command" : "FRC_SetOverRide", "Value" : ' + str(speed) + ' } \r\n')
     rmi_read(sock)
+
+    return sequence
 
 # ===== TESTS =======================================================================
 
@@ -236,6 +240,11 @@ def print_robot_position():
     time.sleep(0.5)
     close_connection(sock)
 
+def move_robot_to_home_position():
+    """Connect with robot and move it to its HOME position."""
+    sock = initialize_connection()
+    home_robot(sock, 1)
+    close_connection(sock)
 
 def test_robot_motion_interface():
     """Test of the prepared interface for connecting with the robot and its advanced functions."""
@@ -366,4 +375,5 @@ def test_robot_motion_interface_old():
 
 if __name__ == "__main__":
     # get_robot_position()
-    test_robot_motion_interface()
+    move_robot_to_home_position()
+    # test_robot_motion_interface()

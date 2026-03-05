@@ -27,10 +27,13 @@ from stabilization import handle_stabilized_points
 from vision_QR import calculate_object_position_3_dof
 
 
-TEST_RUN = True # flag for tests
-CONNECTION_INTERVAL = 0.5
+TEST_RUN = 1 # True == test (vision only) or False == run with robot
+CONNECTION_INTERVAL = 0.5 # s
 QR_TEXT = '001'
-QR_POSITION = [70.0, 15.0, 110.0] # [x, y, z]
+QR_POSITION = [110.0, 60.0, 400.0] # [x, y, z] mm
+MAX_ALLOWED_OFFSET = 50 # mm
+MIN_ALLOWED_OFFSET = 2 # mm
+ALLOWED_SPEED = 30 # %
 
 
 def run():
@@ -57,7 +60,7 @@ def run():
     if not TEST_RUN:
         sock = initialize_connection()
         # go to start position
-        sequence = home_robot(sock, sequence)
+        sequence = home_robot(sock, sequence, speed=ALLOWED_SPEED)
     
     # start a while loop
     while(True):
@@ -96,9 +99,16 @@ def run():
             # position_offset = QR_POSITION - last_qr_coord
             position_offset = [round(float(q1 - q2), 2) for (q1, q2) in zip(QR_POSITION, last_qr_coord)]
             print(position_offset)
-            if not TEST_RUN:
+
+            if not TEST_RUN and abs(position_offset[0]) > MIN_ALLOWED_OFFSET:
+            # and abs(position_offset[0]) < MAX_ALLOWED_OFFSET:                             
+            # if not TEST_RUN and math.dist(position_offset, [0, 0, 0]) < MAX_ALLOWED_OFFSET \
+            #                 and math.dist(position_offset, [0, 0, 0]) > MIN_ALLOWED_OFFSET:
                 sequence = move_robot_cartesian_representation(sock, sequence, is_motion_relative=True, 
-                                                x=position_offset[0], y=position_offset[1], z=position_offset[2])
+                                                #x = position_offset[2],
+                                                #y = position_offset[0], 
+                                                z = position_offset[1], 
+                                                wait_for_response = not sequence % 7)
 
         # measure time
         if time.time() > last_time_fps + 1:

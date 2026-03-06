@@ -45,7 +45,6 @@ def run():
 
     # additional variables
     list_with_stabilized_objects = []
-    last_qr_coord = [0, 0, 0]
     sequence = 1 # ID of the motion command in RMI sequence
 
     # initializing QR code detector
@@ -94,21 +93,19 @@ def run():
             last_time_connection = time.time()
 
             if len(stabilized_coords):
-                last_qr_coord = stabilized_coords[0]
-            print(last_qr_coord)
-            # position_offset = QR_POSITION - last_qr_coord
-            position_offset = [round(float(q1 - q2), 2) for (q1, q2) in zip(QR_POSITION, last_qr_coord)]
+                position_offset = [round(float(q1 - q2), 2) for (q1, q2) in zip(QR_POSITION, stabilized_coords[0])]
+                print(stabilized_coords[0])
+            else:
+                position_offset = [0, 0, 0]
             print(position_offset)
-
-            if not TEST_RUN and abs(position_offset[0]) > MIN_ALLOWED_OFFSET:
-            # and abs(position_offset[0]) < MAX_ALLOWED_OFFSET:                             
-            # if not TEST_RUN and math.dist(position_offset, [0, 0, 0]) < MAX_ALLOWED_OFFSET \
-            #                 and math.dist(position_offset, [0, 0, 0]) > MIN_ALLOWED_OFFSET:
+                           
+            if not TEST_RUN and math.dist(position_offset, [0, 0, 0]) < MAX_ALLOWED_OFFSET \
+                            and math.dist(position_offset, [0, 0, 0]) > MIN_ALLOWED_OFFSET:
                 sequence = move_robot_cartesian_representation(sock, sequence, is_motion_relative=True, 
                                                 #x = position_offset[2],
-                                                #y = position_offset[0], 
+                                                y = position_offset[0], 
                                                 z = position_offset[1], 
-                                                wait_for_response = not sequence % 7)
+                                                wait_for_response = not sequence % 5)
 
         # measure time
         if time.time() > last_time_fps + 1:

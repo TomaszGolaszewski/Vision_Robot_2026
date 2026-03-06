@@ -2,15 +2,19 @@ Changelog
 ======
 
 
+v0.2.7 - 06.03.2026 
+------
+* Updated main program after testing on real robot.
+
 v0.2.6 - 05.03.2026 
 ------
 * Updated robot_motion_interface nad main program after testing on real robot.
 
 v0.2.5 - 04.03.2026 
 ------
-* Prepared resources for further tests with the robot:
-    - added robot response parsing,
-    - coupled QR code position detection with robot movement.
+* Prepared resources for further tests with the robot
+    * added robot response parsing,
+    * coupled QR code position detection with robot movement.
 
 v0.2.4 - 04.03.2026
 ------

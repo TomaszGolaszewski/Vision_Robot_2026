@@ -2,6 +2,15 @@ Changelog
 ======
 
 
+v0.3.0 - 13.03.2026 
+------
+* Added FakeSocket class to simulate TCP socket for debugging without a real robot.
+* Implemented multithreading for further tests with the robot.
+
+v0.3 - Multithreading
+======
+
+
 v0.2.7 - 06.03.2026 
 ------
 * Updated main program after testing on real robot.

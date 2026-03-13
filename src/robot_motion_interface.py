@@ -1,10 +1,14 @@
 import socket
+import threading
 import time
 import json
 import copy
 import random
 
+from fake_socket import *
+
 # Global variables
+USE_FAKE_SOCKET = True
 IP_ADDRESS = '127.0.0.1'
 PORT_CONNECTION_PROCEDURE = 16001
 
@@ -248,7 +252,11 @@ def move_robot_to_home_position():
 
 def test_robot_motion_interface():
     """Test of the prepared interface for connecting with the robot and its advanced functions."""
-    sock = initialize_connection()
+    if USE_FAKE_SOCKET:
+        # use simulated socket - local debug mode
+        sock = FakeSocket()
+    else:
+        sock = initialize_connection()
     sequence = 1 # ID of the motion command in RMI sequence
 
     # go to start position
@@ -373,7 +381,64 @@ def test_robot_motion_interface_old():
         rmi_send(s2, '{"Communication": "FRC_Disconnect"}\r\n')
         rmi_read(s2)
 
+# ===== TEST MULTITHREADING =======================================================================
+
+def test_multithreading_interface_sender(sock, sequence):
+    """Wątek wysyłający wiadomości."""
+    for _ in range(20):
+        r = random.randint(1, 3)
+        sign = random.randint(0, 1)
+        if not sign: sign = -1
+        
+        if r == 1:
+            sequence = move_robot_cartesian_representation(sock, sequence, 
+                        is_motion_relative=True, x=sign*5.0, accuracy='CNT', wait_for_response=False)
+        elif r == 2:
+            sequence = move_robot_cartesian_representation(sock, sequence, 
+                        is_motion_relative=True, y=sign*5.0, accuracy='CNT', wait_for_response=False)
+        else:
+            sequence = move_robot_cartesian_representation(sock, sequence, 
+                        is_motion_relative=True, z=sign*5.0, accuracy='CNT', wait_for_response=False)
+        time.sleep(0.5)
+
+def test_multithreading_interface_receiver(sock):
+    """Wątek odbierający wiadomości."""
+    while True:
+        data = sock.recv(1024)
+        if not data:
+            print("Connection closed by server")
+            break
+        message = json.loads(data)
+        message_decoded = json.dumps(message, indent=2)
+        print(message_decoded)
+
+def test_multithreading_interface():
+
+    if USE_FAKE_SOCKET:
+        # use simulated socket - local debug mode
+        sock = FakeSocket()
+    else:
+        sock = initialize_connection()
+    sequence = 1 # ID of the motion command in RMI sequence
+
+    # go to start position
+    sequence = home_robot(sock, sequence)
+
+    t_send = threading.Thread(target=test_multithreading_interface_sender, args=(sock, sequence), daemon=True)
+    t_recv = threading.Thread(target=test_multithreading_interface_receiver, args=(sock,), daemon=True)
+
+    t_send.start()
+    t_recv.start()
+
+    t_send.join()
+    t_recv.join()
+
+    close_connection(sock)
+
+# ===== MAIN =======================================================================
+
 if __name__ == "__main__":
     # get_robot_position()
-    move_robot_to_home_position()
+    #move_robot_to_home_position()
     # test_robot_motion_interface()
+    test_multithreading_interface()

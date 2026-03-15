@@ -2,6 +2,10 @@ Changelog
 ======
 
 
+v0.3.1 - 15.03.2026
+------
+* Updated robot motion interface after testing on real robot.
+
 v0.3.0 - 13.03.2026 
 ------
 * Added FakeSocket class to simulate TCP socket for debugging without a real robot.

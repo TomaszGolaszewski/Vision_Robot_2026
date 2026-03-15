@@ -64,6 +64,7 @@ FRC_CARTESIAN_REPRESENTATION_TEMPLATE_DICT = {
 
 def rmi_send(sock: socket.socket, message: str) -> None: 
     """Encode and send a message over an RMI socket."""
+    print("[SENDER]", message)
     sock.send(message.encode())
 
 def rmi_read(sock: socket.socket) -> dict: 
@@ -79,11 +80,15 @@ def rmi_read(sock: socket.socket) -> dict:
 
             error_id = message["ErrorID"]
             if error_id == 7126:
-                print("ERROR: 7126 - :)")
+                print("ERROR: 7126 - robot is not mastered or its program buffer is full ???")
+            elif error_id == 7015:
+                print("ERROR: 7015 - robot cannot move safely, you must select the program and move it manually to the home position ???")
             elif error_id == 2556936:
                 print("ERROR: 2556936 - TP enabled!")
             elif error_id == 2556937:
                 print("ERROR: 2556937 - some errors on TP???")
+            elif error_id == 2556942:
+                print("ERROR: 2556942 - robot cannot move safely, you must select the program and move it manually to the home position ???")
             elif error_id == 2556943:
                 print("ERROR: 2556943 - Last connection was not aborted!")
             elif error_id == 2556956:
@@ -383,36 +388,43 @@ def test_robot_motion_interface_old():
 
 # ===== TEST MULTITHREADING =======================================================================
 
-def test_multithreading_interface_sender(sock, sequence):
-    """Wątek wysyłający wiadomości."""
-    for _ in range(20):
+def test_multithreading_interface_sender(sock, stop_event, sequence):
+    """Thread sending messages."""
+    for _ in range(100):
+        jump_distance = 5.0
         r = random.randint(1, 3)
         sign = random.randint(0, 1)
         if not sign: sign = -1
         
         if r == 1:
             sequence = move_robot_cartesian_representation(sock, sequence, 
-                        is_motion_relative=True, x=sign*5.0, accuracy='CNT', wait_for_response=False)
+                        is_motion_relative=True, x=sign*jump_distance, accuracy='CNT', wait_for_response=False)
         elif r == 2:
             sequence = move_robot_cartesian_representation(sock, sequence, 
-                        is_motion_relative=True, y=sign*5.0, accuracy='CNT', wait_for_response=False)
+                        is_motion_relative=True, y=sign*jump_distance, accuracy='CNT', wait_for_response=False)
         else:
             sequence = move_robot_cartesian_representation(sock, sequence, 
-                        is_motion_relative=True, z=sign*5.0, accuracy='CNT', wait_for_response=False)
-        time.sleep(0.5)
+                        is_motion_relative=True, z=sign*jump_distance, accuracy='CNT', wait_for_response=False)
+        time.sleep(0.1)
+    sequence = move_robot_cartesian_representation(sock, sequence, 
+                        is_motion_relative=True, z=50.0, wait_for_response=False)
+    time.sleep(3)
+    stop_event.set() # flag informing that all commands have been sent
 
-def test_multithreading_interface_receiver(sock):
-    """Wątek odbierający wiadomości."""
-    while True:
+def test_multithreading_interface_receiver(sock, stop_event):
+    """Thread receiving messages."""
+    while not stop_event.is_set():
         data = sock.recv(1024)
         if not data:
             print("Connection closed by server")
             break
         message = json.loads(data)
+        seq = message.get("SequenceID", "NOSEQ")
         message_decoded = json.dumps(message, indent=2)
-        print(message_decoded)
+        print("[RECEIVER]", message_decoded, seq)
 
 def test_multithreading_interface():
+    stop_event = threading.Event() # flag stopping both threads
 
     if USE_FAKE_SOCKET:
         # use simulated socket - local debug mode
@@ -422,10 +434,10 @@ def test_multithreading_interface():
     sequence = 1 # ID of the motion command in RMI sequence
 
     # go to start position
-    sequence = home_robot(sock, sequence)
+    sequence = home_robot(sock, sequence, 50)
 
-    t_send = threading.Thread(target=test_multithreading_interface_sender, args=(sock, sequence), daemon=True)
-    t_recv = threading.Thread(target=test_multithreading_interface_receiver, args=(sock,), daemon=True)
+    t_send = threading.Thread(target=test_multithreading_interface_sender, args=(sock, stop_event, sequence), daemon=True)
+    t_recv = threading.Thread(target=test_multithreading_interface_receiver, args=(sock, stop_event), daemon=True)
 
     t_send.start()
     t_recv.start()
@@ -439,6 +451,6 @@ def test_multithreading_interface():
 
 if __name__ == "__main__":
     # get_robot_position()
-    #move_robot_to_home_position()
+    move_robot_to_home_position()
     # test_robot_motion_interface()
-    test_multithreading_interface()
+    # test_multithreading_interface()

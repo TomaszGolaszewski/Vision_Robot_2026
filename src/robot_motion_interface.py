@@ -5,12 +5,9 @@ import json
 import copy
 import random
 
+from settings import *
 from fake_socket import *
 
-# Global variables
-USE_FAKE_SOCKET = True
-IP_ADDRESS = '127.0.0.1'
-PORT_CONNECTION_PROCEDURE = 16001
 
 # Movement instruction templates
 FRC_JOINT_REPRESENTATION_TEMPLATE_DICT = {
@@ -388,14 +385,18 @@ def test_robot_motion_interface_old():
 
 # ===== TEST MULTITHREADING =======================================================================
 
-def test_multithreading_interface_sender(sock, stop_event, sequence):
+def test_multithreading_interface_sender(sock, stop_event, sequence_queue, sequence_lock, sequence):
     """Thread sending messages."""
-    for _ in range(100):
+    for _ in range(20):
         jump_distance = 5.0
         r = random.randint(1, 3)
         sign = random.randint(0, 1)
         if not sign: sign = -1
         
+        with sequence_lock:
+            sequence_queue.append(sequence)
+            print("[QUEUE]", len(sequence_queue), sequence_queue)
+
         if r == 1:
             sequence = move_robot_cartesian_representation(sock, sequence, 
                         is_motion_relative=True, x=sign*jump_distance, accuracy='CNT', wait_for_response=False)
@@ -406,12 +407,17 @@ def test_multithreading_interface_sender(sock, stop_event, sequence):
             sequence = move_robot_cartesian_representation(sock, sequence, 
                         is_motion_relative=True, z=sign*jump_distance, accuracy='CNT', wait_for_response=False)
         time.sleep(0.1)
+
+    with sequence_lock:
+            sequence_queue.append(sequence)
+            print("[QUEUE]", len(sequence_queue), sequence_queue)
+            
     sequence = move_robot_cartesian_representation(sock, sequence, 
                         is_motion_relative=True, z=50.0, wait_for_response=False)
     time.sleep(3)
     stop_event.set() # flag informing that all commands have been sent
 
-def test_multithreading_interface_receiver(sock, stop_event):
+def test_multithreading_interface_receiver(sock, stop_event, sequence_queue, sequence_lock):
     """Thread receiving messages."""
     while not stop_event.is_set():
         data = sock.recv(1024)
@@ -419,11 +425,18 @@ def test_multithreading_interface_receiver(sock, stop_event):
             print("Connection closed by server")
             break
         message = json.loads(data)
+
         seq = message.get("SequenceID", "NOSEQ")
+        with sequence_lock:
+            if seq in sequence_queue:
+                sequence_queue.remove(seq)
+
         message_decoded = json.dumps(message, indent=2)
-        print("[RECEIVER]", message_decoded, seq)
+        print("[RECEIVER]", message_decoded)
 
 def test_multithreading_interface():
+    sequence_queue = []
+    sequence_lock = threading.Lock()
     stop_event = threading.Event() # flag stopping both threads
 
     if USE_FAKE_SOCKET:
@@ -436,8 +449,8 @@ def test_multithreading_interface():
     # go to start position
     sequence = home_robot(sock, sequence, 50)
 
-    t_send = threading.Thread(target=test_multithreading_interface_sender, args=(sock, stop_event, sequence), daemon=True)
-    t_recv = threading.Thread(target=test_multithreading_interface_receiver, args=(sock, stop_event), daemon=True)
+    t_send = threading.Thread(target=test_multithreading_interface_sender, args=(sock, stop_event, sequence_queue, sequence_lock, sequence), daemon=True)
+    t_recv = threading.Thread(target=test_multithreading_interface_receiver, args=(sock, stop_event, sequence_queue, sequence_lock), daemon=True)
 
     t_send.start()
     t_recv.start()
@@ -451,6 +464,6 @@ def test_multithreading_interface():
 
 if __name__ == "__main__":
     # get_robot_position()
-    move_robot_to_home_position()
+    # move_robot_to_home_position()
     # test_robot_motion_interface()
-    # test_multithreading_interface()
+    test_multithreading_interface()

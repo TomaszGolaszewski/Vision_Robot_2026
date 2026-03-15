@@ -22,6 +22,7 @@ else:
     path.append('.\\src')
     print("other")
 
+from settings import *
 from robot_motion_interface import *
 from stabilization import handle_stabilized_points
 from vision_QR import calculate_object_position_3_dof

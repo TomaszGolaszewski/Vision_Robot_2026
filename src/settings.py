@@ -1,0 +1,6 @@
+# Global variables
+
+USE_FAKE_SOCKET = True
+
+IP_ADDRESS = '127.0.0.1'
+PORT_CONNECTION_PROCEDURE = 16001

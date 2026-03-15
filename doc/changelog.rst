@@ -2,6 +2,16 @@ Changelog
 ======
 
 
+v0.4.0 - 15.03.2026
+------
+* Added first version on TCP client;
+* Implemented TCP client for further tests with the robot;
+* Settings moved to one file.
+
+v0.4 - Multithreading with TCP client
+======
+
+
 v0.3.1 - 15.03.2026
 ------
 * Updated robot motion interface after testing on real robot.

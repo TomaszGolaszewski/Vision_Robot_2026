@@ -1,5 +1,26 @@
 # Vision_Robot_2026
+
+## About
 This project is part of my PhD research. 
 Its goal is to enhance the capabilities of an industrial robot by integrating machine vision.
 
 **Project under development!!!**
+
+### Current stage:
+v0.4 - Multithreading with TCP client
+
+### Last changes:
+v0.4.0 - 15.03.2026
+
+* Added first version on TCP client;
+* Implemented TCP client for further tests with the robot;
+* Settings moved to one file.
+
+v0.3.1 - 15.03.2026
+
+* Updated robot motion interface after testing on real robot.
+
+v0.3.0 - 13.03.2026 
+
+* Added FakeSocket class to simulate TCP socket for debugging without a real robot.
+* Implemented multithreading for further tests with the robot.

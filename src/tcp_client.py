@@ -197,13 +197,16 @@ class TcpClient:
         """Continuously read framed messages from the socket."""
         try:
             while not self._stop_event.is_set():
-                header = self._recv_exactly(_HEADER_SIZE)
-                if header is None:
-                    break
+                # header = self._recv_exactly(_HEADER_SIZE)
+                # if header is None:
+                #     break
 
-                (length,) = struct.unpack(_HEADER_FORMAT, header)
-                payload = self._recv_exactly(length)
-                if payload is None:
+                # (length,) = struct.unpack(_HEADER_FORMAT, header)
+                # payload = self._recv_exactly(length)
+                # if payload is None:
+                #     break
+                payload = self._sock.recv(1024)
+                if payload is None or not len(payload):
                     break
 
                 self._enqueue_received(payload)
@@ -223,9 +226,9 @@ class TcpClient:
                     payload = self._send_queue.get(timeout=_QUEUE_TIMEOUT_S)
                 except queue.Empty:
                     continue
-
-                frame = struct.pack(_HEADER_FORMAT, len(payload)) + payload
-                self._send_all(frame)
+                # frame = struct.pack(_HEADER_FORMAT, len(payload)) + payload
+                # self._send_all(frame)
+                self._send_all(payload)
         except Exception as exc:
             if not self._stop_event.is_set():
                 logger.error("Writer thread error: %s", exc)

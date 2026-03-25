@@ -57,6 +57,29 @@ FRC_CARTESIAN_REPRESENTATION_TEMPLATE_DICT = {
     "TermValue": 0, # 1-100
 }
 
+def decode_error_id(error_id: int) -> None:
+    """Print information about the error received."""
+    if error_id == 7126:
+        print("ERROR: 7126 - ??? robot is not mastered or its program buffer is full ???")
+    elif error_id == 7015:
+        print("ERROR: 7015 - ??? robot cannot move safely, you must select the program and move it manually to the home position ???")
+    elif error_id == 2556936:
+        print("ERROR: 2556936 - TP enabled!")
+    elif error_id == 2556937:
+        print("ERROR: 2556937 - ??? some errors on TP ???")
+    elif error_id == 2556942:
+        print("ERROR: 2556942 - ??? robot cannot move safely, you must select the program and move it manually to the home position ???")
+    elif error_id == 2556943:
+        print("ERROR: 2556943 - Last connection was not aborted!")
+    elif error_id == 2556955:
+        print("ERROR: 2556955 - Messages are being sent too fast!")
+    elif error_id == 2556956:
+        print("ERROR: 2556956 - ??? motion aborted ???")
+    elif error_id == 2556957:
+        print("ERROR: 2556957 - Invalid SequenceID, length of path equals zero or RMI_MOVE program is open!")
+    else:
+        print(f"ERROR: {error_id} - NEW ERROR !!!")
+
 # ===== CONNECTION =======================================================================
 
 def rmi_send(sock: socket.socket, message: str) -> None: 
@@ -76,23 +99,8 @@ def rmi_read(sock: socket.socket) -> dict:
             message = json.loads(line)
 
             error_id = message["ErrorID"]
-            if error_id == 7126:
-                print("ERROR: 7126 - robot is not mastered or its program buffer is full ???")
-            elif error_id == 7015:
-                print("ERROR: 7015 - robot cannot move safely, you must select the program and move it manually to the home position ???")
-            elif error_id == 2556936:
-                print("ERROR: 2556936 - TP enabled!")
-            elif error_id == 2556937:
-                print("ERROR: 2556937 - some errors on TP???")
-            elif error_id == 2556942:
-                print("ERROR: 2556942 - robot cannot move safely, you must select the program and move it manually to the home position ???")
-            elif error_id == 2556943:
-                print("ERROR: 2556943 - Last connection was not aborted!")
-            elif error_id == 2556956:
-                print("ERROR: 2556956 - motion aborted???")
-            elif error_id == 2556957:
-                print("ERROR: 2556957 - Invalid SequenceID, length of path equals zero or RMI_MOVE program is open!")
-
+            decode_error_id(error_id)
+            
             messages.append(message) 
 
     message_decoded = json.dumps(messages, indent=2)

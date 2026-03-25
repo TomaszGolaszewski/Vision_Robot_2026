@@ -2,6 +2,11 @@ Changelog
 ======
 
 
+v0.4.1 - 25.03.2026
+------
+* Updated TCP client after testing with real robot.
+* Some functions have been updated to work in both interfaces.
+
 v0.4.0 - 15.03.2026
 ------
 * Added first version on TCP client;

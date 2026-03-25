@@ -5,7 +5,7 @@ from tcp_client import *
 # ===== CONNECTION =======================================================================
 
 def get_new_port_number() -> int:
-    # get port to create connection
+    """Connect to the robot to get the new port number."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.connect((IP_ADDRESS, PORT_CONNECTION_PROCEDURE))
         rmi_send(sock, '{"Communication": "FRC_Connect"}\r\n')
@@ -29,25 +29,29 @@ def get_message(client: TcpClient):
     data = client.readMessage()
 
     messages = [] 
+    error_list = []
+    sequence_list = []
     for line in data.splitlines(): 
         if line.strip(): 
             message = json.loads(line)
-
-            error_id = message["ErrorID"]
-            decode_error_id(error_id)
-            
             messages.append(message) 
 
+            error_id = message["ErrorID"]
+            error_list.append(error_id)
+            decode_error_id(error_id)
+
+            sequence_id = message.get("SequenceID", None)
+            if sequence_id:
+                sequence_list.append(sequence_id)
+            
     message_decoded = json.dumps(messages, indent=2)
     print(message_decoded)
 
-    return error_id, message
+    return error_list, sequence_list
 
-# ===== MOVEMENT =======================================================================
-
-# ===== TESTS =======================================================================
-
-def test_robot_motion_tcp_client():
+def initialize_connection_with_tcp_client() -> TcpClient:
+    """Create TCP client object, wait until all errors on robot are resolved and initialize the connection.
+    Return connected TCP client object."""
 
     new_port = get_new_port_number()
     time.sleep(0.1)
@@ -66,8 +70,155 @@ def test_robot_motion_tcp_client():
     while error_id:
         send_message(client, '{"Command": "FRC_Initialize"}\r\n')
         time.sleep(0.1)
-        error_id, msg = get_message(client)
-        if error_id == 0:
+        error_list, _ = get_message(client)
+        if error_list[0] == 0:
+            print("Initialized")
+            time.sleep(0.1)
+        else:
+            time.sleep(2)
+
+    return client
+
+def close_connection_with_tcp_client(client: TcpClient) -> None:
+    """Cancel all commands, close the connection to the robot and close the TCP client."""
+
+    time.sleep(0.1)
+
+    # cancel all commands
+    send_message(client, '{"Command": "FRC_Abort"}\r\n')
+    time.sleep(0.1)
+    get_message(client)
+    time.sleep(0.1)
+
+    # close the connection on robot side
+    send_message(client, '{"Communication": "FRC_Disconnect"}\r\n')
+    time.sleep(0.1)
+    get_message(client)
+    time.sleep(0.1)
+
+    client.cancel()
+    client.join(timeout=5.0)
+
+# ===== MOVEMENT =======================================================================
+
+def move_robot_joint_representation_with_tcp_client(client: TcpClient, sequence: int, is_motion_relative: bool = False, 
+                        j1: float = 0.0, j2: float = 0.0, j3: float = 0.0, 
+                        j4: float = 0.0, j5: float = 0.0, j6: float = 0.0, 
+                        speed: int = 100, accuracy: str = 'FINE', wait_for_response: bool = False) -> int:
+
+    motion_dict = prepare_command_move_robot_joint_representation(
+                        sequence=sequence, is_motion_relative=is_motion_relative,
+                        j1=j1, j2=j2, j3=j3, j4=j4, j5=j5, j6=j6, speed=speed, accuracy=accuracy)
+
+    motion_json = json.dumps(motion_dict, indent=2)
+    motion_json = motion_json + "\r\n"
+
+    send_message(client, motion_json)
+    if wait_for_response:
+        time.sleep(1)
+        get_message(client)
+
+    return sequence + 1
+
+def move_robot_cartesian_representation_with_tcp_client(client: TcpClient, sequence: int, is_motion_relative: bool = False, 
+                        x: float = 0.0, y: float = 0.0, z: float = 0.0, 
+                        w: float = 0.0, p: float = 0.0, r: float = 0.0, 
+                        speed: int = 100, accuracy: str = 'FINE', wait_for_response: bool = False) -> int:
+
+    motion_json = prepare_command_move_robot_cartesian_representation(
+                        sequence=sequence, is_motion_relative=is_motion_relative,
+                        x=x, y=y, z=z, w=w, p=p, r=r, speed=speed, accuracy=accuracy)
+
+    send_message(client, motion_json)
+    if wait_for_response:
+        time.sleep(1)
+        get_message(client)
+
+    return sequence + 1
+
+def home_robot_with_tcp_client(client: TcpClient, sequence: int, speed: int = 100) -> int:
+    """Move the robot to its HOME position."""
+    send_message(client, '{"Command" : "FRC_SetOverRide", "Value" : 10 } \r\n')
+    time.sleep(0.1)
+    get_message(client)
+    time.sleep(0.1)
+
+    sequence = move_robot_joint_representation_with_tcp_client(client, sequence, wait_for_response=True,
+                                        j1=-50, j2=25.0, j3=-40.0, j4=-118.0, j5=-61.0, j6=-11)
+    time.sleep(1)
+
+    send_message(client, '{"Command" : "FRC_SetOverRide", "Value" : ' + str(speed) + ' } \r\n')
+    time.sleep(0.1)
+    get_message(client)
+    time.sleep(0.1)
+
+    return sequence
+
+# ===== TESTS =======================================================================
+
+def test_robot_motion_tcp_client():
+    """Test connection via TCP client with the robot and its functions."""
+
+    sequence_queue = []
+    sequence = 1 # ID of the motion command in RMI sequence
+
+    client = initialize_connection_with_tcp_client()
+
+    for _ in range(50):
+        jump_distance = 5.0
+        r = random.randint(1, 3)
+        sign = random.randint(0, 1)
+        if not sign: sign = -1
+        
+        while client.hasData():
+            _, sequence_completed = get_message(client)
+            sequence_queue = [s for s in sequence_queue if s not in sequence_completed]
+
+        sequence_queue.append(sequence)
+        print("[QUEUE]", len(sequence_queue), sequence_queue)
+        if r == 1:
+            sequence = move_robot_cartesian_representation_with_tcp_client(client, sequence, 
+                        is_motion_relative=True, x=sign*jump_distance, accuracy='CNT', wait_for_response=False)
+        elif r == 2:
+            sequence = move_robot_cartesian_representation_with_tcp_client(client, sequence, 
+                        is_motion_relative=True, y=sign*jump_distance, accuracy='CNT', wait_for_response=False)
+        else:
+            sequence = move_robot_cartesian_representation_with_tcp_client(client, sequence, 
+                        is_motion_relative=True, z=sign*jump_distance, accuracy='CNT', wait_for_response=False)
+        time.sleep(0.1)
+
+
+    sequence_queue.append(sequence)
+    print("[QUEUE]", len(sequence_queue), sequence_queue)
+    sequence = move_robot_cartesian_representation_with_tcp_client(client, sequence, 
+                        is_motion_relative=True, z=50.0, wait_for_response=False)
+    time.sleep(3)
+
+    close_connection_with_tcp_client(client)
+
+
+def test_robot_motion_tcp_client_old():
+    """Test connection via TCP client with the robot and its functions."""
+
+    new_port = get_new_port_number()
+    time.sleep(0.1)
+    client = TcpClient(IP_ADDRESS, new_port)
+    #client.registerCallback(lambda: print("New message!"))
+    time.sleep(0.1)
+
+    # cancel all old commands
+    send_message(client, '{"Command": "FRC_Abort"}\r\n')
+    time.sleep(0.1)
+    get_message(client)
+    time.sleep(0.1)
+
+    # initialize connection
+    error_id = 1
+    while error_id:
+        send_message(client, '{"Command": "FRC_Initialize"}\r\n')
+        time.sleep(0.1)
+        error_list, _ = get_message(client)
+        if error_list[0] == 0:
             print("Initialized")
             time.sleep(0.1)
         else:

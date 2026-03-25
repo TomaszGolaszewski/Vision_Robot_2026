@@ -60,7 +60,7 @@ def run():
     if not TEST_RUN:
         sock = initialize_connection()
         # go to start position
-        sequence = home_robot(sock, sequence, speed=ALLOWED_SPEED)
+        sequence = home_robot_with_socket(sock, sequence, speed=ALLOWED_SPEED)
     
     # start a while loop
     while(True):
@@ -102,7 +102,7 @@ def run():
                            
             if not TEST_RUN and math.dist(position_offset, [0, 0, 0]) < MAX_ALLOWED_OFFSET \
                             and math.dist(position_offset, [0, 0, 0]) > MIN_ALLOWED_OFFSET:
-                sequence = move_robot_cartesian_representation(sock, sequence, is_motion_relative=True, 
+                sequence = move_robot_cartesian_representation_with_socket(sock, sequence, is_motion_relative=True, 
                                                 #x = position_offset[2],
                                                 y = position_offset[0], 
                                                 z = position_offset[1], 

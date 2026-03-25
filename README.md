@@ -10,6 +10,11 @@ Its goal is to enhance the capabilities of an industrial robot by integrating ma
 v0.4 - Multithreading with TCP client
 
 ### Last changes:
+v0.4.2 - 25.03.2026
+
+* Prepared resources for further tests with the robot.
+* More functions updates to allow to work in both interfaces.
+
 v0.4.1 - 25.03.2026
 
 * Updated TCP client after testing with real robot.
@@ -21,6 +26,3 @@ v0.4.0 - 15.03.2026
 * Implemented TCP client for further tests with the robot;
 * Settings moved to one file.
 
-v0.3.1 - 15.03.2026
-
-* Updated robot motion interface after testing on real robot.

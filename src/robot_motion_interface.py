@@ -110,6 +110,8 @@ def rmi_read(sock: socket.socket) -> dict:
 
 
 def initialize_connection() -> socket.socket:
+    """Create socket object, wait until all errors on robot are resolved and initialize the connection.
+    Return connected socket object."""
 
     # get port to create connection
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s1:
@@ -148,6 +150,7 @@ def initialize_connection() -> socket.socket:
     return s2
 
 def close_connection(sock: socket.socket):
+    """Cancel all commands, close the connection to the robot and close the socket."""
 
     # cancel all commands
     time.sleep(0.5)
@@ -165,10 +168,10 @@ def close_connection(sock: socket.socket):
 
 # ===== MOVEMENT =======================================================================
 
-def move_robot_joint_representation(sock: socket.socket, sequence: int, is_motion_relative: bool = False, 
+def prepare_command_move_robot_joint_representation(sequence: int, is_motion_relative: bool = False, 
                         j1: float = 0.0, j2: float = 0.0, j3: float = 0.0, 
                         j4: float = 0.0, j5: float = 0.0, j6: float = 0.0, 
-                        speed: int = 100, accuracy: str = 'FINE', wait_for_response: bool = True) -> int:
+                        speed: int = 100, accuracy: str = 'FINE') -> str:
 
     motion_dict = copy.deepcopy(FRC_JOINT_REPRESENTATION_TEMPLATE_DICT)
 
@@ -184,6 +187,17 @@ def move_robot_joint_representation(sock: socket.socket, sequence: int, is_motio
     motion_dict["TermType"] = "CNT" if accuracy == "CNT" else "FINE" # FINE or CNT
     motion_dict["TermValue"] = 100 if accuracy == "CNT" else 0 # 1-100
 
+    return json.dumps(motion_dict, indent=2) + "\r\n"
+
+def move_robot_joint_representation_with_socket(sock: socket.socket, sequence: int, is_motion_relative: bool = False, 
+                        j1: float = 0.0, j2: float = 0.0, j3: float = 0.0, 
+                        j4: float = 0.0, j5: float = 0.0, j6: float = 0.0, 
+                        speed: int = 100, accuracy: str = 'FINE', wait_for_response: bool = True) -> int:
+
+    motion_dict = prepare_command_move_robot_joint_representation(
+                        sequence=sequence, is_motion_relative=is_motion_relative,
+                        j1=j1, j2=j2, j3=j3, j4=j4, j5=j5, j6=j6, speed=speed, accuracy=accuracy)
+
     motion_json = json.dumps(motion_dict, indent=2)
     motion_json = motion_json + "\r\n"
 
@@ -193,10 +207,10 @@ def move_robot_joint_representation(sock: socket.socket, sequence: int, is_motio
 
     return sequence + 1
 
-def move_robot_cartesian_representation(sock: socket.socket, sequence: int, is_motion_relative: bool = False, 
+def prepare_command_move_robot_cartesian_representation(sequence: int, is_motion_relative: bool = False, 
                         x: float = 0.0, y: float = 0.0, z: float = 0.0, 
                         w: float = 0.0, p: float = 0.0, r: float = 0.0, 
-                        speed: int = 100, accuracy: str = 'FINE', wait_for_response: bool = True) -> int:
+                        speed: int = 100, accuracy: str = 'FINE') -> str:
 
     motion_dict = copy.deepcopy(FRC_CARTESIAN_REPRESENTATION_TEMPLATE_DICT)
 
@@ -219,8 +233,16 @@ def move_robot_cartesian_representation(sock: socket.socket, sequence: int, is_m
     motion_dict["TermType"] = "CNT" if accuracy == "CNT" else "FINE" # FINE or CNT
     motion_dict["TermValue"] = 100 if accuracy == "CNT" else 0 # 1-100
 
-    motion_json = json.dumps(motion_dict, indent=2)
-    motion_json = motion_json + "\r\n"
+    return json.dumps(motion_dict, indent=2) + "\r\n"
+
+def move_robot_cartesian_representation_with_socket(sock: socket.socket, sequence: int, is_motion_relative: bool = False, 
+                        x: float = 0.0, y: float = 0.0, z: float = 0.0, 
+                        w: float = 0.0, p: float = 0.0, r: float = 0.0, 
+                        speed: int = 100, accuracy: str = 'FINE', wait_for_response: bool = True) -> int:
+
+    motion_json = prepare_command_move_robot_cartesian_representation(
+                        sequence=sequence, is_motion_relative=is_motion_relative,
+                        x=x, y=y, z=z, w=w, p=p, r=r, speed=speed, accuracy=accuracy)
 
     rmi_send(sock, motion_json)
     if wait_for_response:
@@ -228,11 +250,11 @@ def move_robot_cartesian_representation(sock: socket.socket, sequence: int, is_m
 
     return sequence + 1
 
-def home_robot(sock: socket.socket, sequence: int, speed: int = 100) -> int:
+def home_robot_with_socket(sock: socket.socket, sequence: int, speed: int = 100) -> int:
     """Move the robot to its HOME position."""
     rmi_send(sock, '{"Command" : "FRC_SetOverRide", "Value" : 10 } \r\n')
     rmi_read(sock)
-    sequence = move_robot_joint_representation(sock, sequence, 
+    sequence = move_robot_joint_representation_with_socket(sock, sequence, 
                                         j1=-50, j2=25.0, j3=-40.0, j4=-118.0, j5=-61.0, j6=-11)
     time.sleep(1)
     rmi_send(sock, '{"Command" : "FRC_SetOverRide", "Value" : ' + str(speed) + ' } \r\n')
@@ -257,7 +279,7 @@ def print_robot_position():
 def move_robot_to_home_position():
     """Connect with robot and move it to its HOME position."""
     sock = initialize_connection()
-    home_robot(sock, 1)
+    home_robot_with_socket(sock, 1)
     close_connection(sock)
 
 def test_robot_motion_interface():
@@ -270,7 +292,7 @@ def test_robot_motion_interface():
     sequence = 1 # ID of the motion command in RMI sequence
 
     # go to start position
-    sequence = home_robot(sock, sequence)
+    sequence = home_robot_with_socket(sock, sequence)
 
     for _ in range(20):
         r = random.randint(1, 3)
@@ -278,11 +300,11 @@ def test_robot_motion_interface():
         if not sign: sign = -1
         
         if r == 1:
-            sequence = move_robot_cartesian_representation(sock, sequence, is_motion_relative=True, x=sign*5.0) #, accuracy='CNT')
+            sequence = move_robot_cartesian_representation_with_socket(sock, sequence, is_motion_relative=True, x=sign*5.0) #, accuracy='CNT')
         elif r == 2:
-            sequence = move_robot_cartesian_representation(sock, sequence, is_motion_relative=True, y=sign*5.0) #, accuracy='CNT')
+            sequence = move_robot_cartesian_representation_with_socket(sock, sequence, is_motion_relative=True, y=sign*5.0) #, accuracy='CNT')
         else:
-            sequence = move_robot_cartesian_representation(sock, sequence, is_motion_relative=True, z=sign*5.0) #, accuracy='CNT')
+            sequence = move_robot_cartesian_representation_with_socket(sock, sequence, is_motion_relative=True, z=sign*5.0) #, accuracy='CNT')
 
     close_connection(sock)
 
@@ -342,46 +364,46 @@ def test_robot_motion_interface_old():
         sequence = 1 # ID of the motion command in RMI sequence
         rmi_send(s2, '{"Command" : "FRC_SetOverRide", "Value" : 10 } \r\n')
         rmi_read(s2)
-        sequence = move_robot_joint_representation(s2, sequence, 
+        sequence = move_robot_joint_representation_with_socket(s2, sequence, 
                                             j1=-40.0, j2=5.0, j3=-30.0, j4=-90.0, j5=-80.0, j6=100.0)
         time.sleep(1)
         rmi_send(s2, '{"Command" : "FRC_SetOverRide", "Value" : 50 } \r\n')
         rmi_read(s2)
 
-        # sequence = move_robot_joint_representation(s2, sequence, is_motion_relative=True, j1=10.0)
+        # sequence = move_robot_joint_representation_with_socket(s2, sequence, is_motion_relative=True, j1=10.0)
         # time.sleep(3)
-        # sequence = move_robot_joint_representation(s2, sequence, is_motion_relative=True, j3=10.0)
+        # sequence = move_robot_joint_representation_with_socket(s2, sequence, is_motion_relative=True, j3=10.0)
         # time.sleep(3)
-        # sequence = move_robot_joint_representation(s2, sequence, is_motion_relative=True, j1=-10.0)
+        # sequence = move_robot_joint_representation_with_socket(s2, sequence, is_motion_relative=True, j1=-10.0)
         # time.sleep(3)
-        # sequence = move_robot_joint_representation(s2, sequence, is_motion_relative=True, j3=-10.0)
+        # sequence = move_robot_joint_representation_with_socket(s2, sequence, is_motion_relative=True, j3=-10.0)
         # time.sleep(3)
         
         for _ in range(5):
-            # sequence = move_robot_joint_representation(s2, sequence, is_motion_relative=True, j1=20.0, accuracy='CNT')
-            # sequence = move_robot_joint_representation(s2, sequence, is_motion_relative=True, j3=-20.0, accuracy='CNT')
-            # sequence = move_robot_joint_representation(s2, sequence, is_motion_relative=True, j1=-20.0, accuracy='CNT')
-            # sequence = move_robot_joint_representation(s2, sequence, is_motion_relative=True, j3=20.0, accuracy='CNT')
+            # sequence = move_robot_joint_representation_with_socket(s2, sequence, is_motion_relative=True, j1=20.0, accuracy='CNT')
+            # sequence = move_robot_joint_representation_with_socket(s2, sequence, is_motion_relative=True, j3=-20.0, accuracy='CNT')
+            # sequence = move_robot_joint_representation_with_socket(s2, sequence, is_motion_relative=True, j1=-20.0, accuracy='CNT')
+            # sequence = move_robot_joint_representation_with_socket(s2, sequence, is_motion_relative=True, j3=20.0, accuracy='CNT')
 
-            sequence = move_robot_cartesian_representation(s2, sequence, is_motion_relative=True, x=200.0, accuracy='CNT')
-            sequence = move_robot_cartesian_representation(s2, sequence, is_motion_relative=True, y=200.0, accuracy='CNT')
-            sequence = move_robot_cartesian_representation(s2, sequence, is_motion_relative=True, x=-200.0, accuracy='CNT')
-            sequence = move_robot_cartesian_representation(s2, sequence, is_motion_relative=True, y=-200.0, accuracy='CNT')
+            sequence = move_robot_cartesian_representation_with_socket(s2, sequence, is_motion_relative=True, x=200.0, accuracy='CNT')
+            sequence = move_robot_cartesian_representation_with_socket(s2, sequence, is_motion_relative=True, y=200.0, accuracy='CNT')
+            sequence = move_robot_cartesian_representation_with_socket(s2, sequence, is_motion_relative=True, x=-200.0, accuracy='CNT')
+            sequence = move_robot_cartesian_representation_with_socket(s2, sequence, is_motion_relative=True, y=-200.0, accuracy='CNT')
 
-            # sequence = move_robot_cartesian_representation(s2, sequence, is_motion_relative=True, w=10.0)
-            # sequence = move_robot_cartesian_representation(s2, sequence, is_motion_relative=True, w=-10.0)
-            # sequence = move_robot_cartesian_representation(s2, sequence, is_motion_relative=True, p=10.0)
-            # sequence = move_robot_cartesian_representation(s2, sequence, is_motion_relative=True, p=-10.0)
-            # sequence = move_robot_cartesian_representation(s2, sequence, is_motion_relative=True, r=10.0)
-            # sequence = move_robot_cartesian_representation(s2, sequence, is_motion_relative=True, r=-10.0)
+            # sequence = move_robot_cartesian_representation_with_socket(s2, sequence, is_motion_relative=True, w=10.0)
+            # sequence = move_robot_cartesian_representation_with_socket(s2, sequence, is_motion_relative=True, w=-10.0)
+            # sequence = move_robot_cartesian_representation_with_socket(s2, sequence, is_motion_relative=True, p=10.0)
+            # sequence = move_robot_cartesian_representation_with_socket(s2, sequence, is_motion_relative=True, p=-10.0)
+            # sequence = move_robot_cartesian_representation_with_socket(s2, sequence, is_motion_relative=True, r=10.0)
+            # sequence = move_robot_cartesian_representation_with_socket(s2, sequence, is_motion_relative=True, r=-10.0)
 
-            # sequence = move_robot_cartesian_representation(s2, sequence, 
+            # sequence = move_robot_cartesian_representation_with_socket(s2, sequence, 
             #                           x=640.0, y=-50.0, z=300.0, w=-100.0, p=-70.0, r=-35.0, accuracy='CNT')
-            # sequence = move_robot_cartesian_representation(s2, sequence, 
+            # sequence = move_robot_cartesian_representation_with_socket(s2, sequence, 
             #                           x=640.0, y=-50.0, z=400.0, w=-100.0, p=-70.0, r=-35.0, accuracy='CNT')
-            # sequence = move_robot_cartesian_representation(s2, sequence, 
+            # sequence = move_robot_cartesian_representation_with_socket(s2, sequence, 
             #                           x=640.0, y=-150.0, z=400.0, w=-100.0, p=-70.0, r=-35.0, accuracy='CNT')
-            # sequence = move_robot_cartesian_representation(s2, sequence, 
+            # sequence = move_robot_cartesian_representation_with_socket(s2, sequence, 
             #                           x=640.0, y=-150.0, z=300.0, w=-100.0, p=-70.0, r=-35.0, accuracy='CNT')
 
         time.sleep(3)
@@ -406,13 +428,13 @@ def test_multithreading_interface_sender(sock, stop_event, sequence_queue, seque
             print("[QUEUE]", len(sequence_queue), sequence_queue)
 
         if r == 1:
-            sequence = move_robot_cartesian_representation(sock, sequence, 
+            sequence = move_robot_cartesian_representation_with_socket(sock, sequence, 
                         is_motion_relative=True, x=sign*jump_distance, accuracy='CNT', wait_for_response=False)
         elif r == 2:
-            sequence = move_robot_cartesian_representation(sock, sequence, 
+            sequence = move_robot_cartesian_representation_with_socket(sock, sequence, 
                         is_motion_relative=True, y=sign*jump_distance, accuracy='CNT', wait_for_response=False)
         else:
-            sequence = move_robot_cartesian_representation(sock, sequence, 
+            sequence = move_robot_cartesian_representation_with_socket(sock, sequence, 
                         is_motion_relative=True, z=sign*jump_distance, accuracy='CNT', wait_for_response=False)
         time.sleep(0.1)
 
@@ -420,7 +442,7 @@ def test_multithreading_interface_sender(sock, stop_event, sequence_queue, seque
             sequence_queue.append(sequence)
             print("[QUEUE]", len(sequence_queue), sequence_queue)
             
-    sequence = move_robot_cartesian_representation(sock, sequence, 
+    sequence = move_robot_cartesian_representation_with_socket(sock, sequence, 
                         is_motion_relative=True, z=50.0, wait_for_response=False)
     time.sleep(3)
     stop_event.set() # flag informing that all commands have been sent
@@ -455,7 +477,7 @@ def test_multithreading_interface():
     sequence = 1 # ID of the motion command in RMI sequence
 
     # go to start position
-    sequence = home_robot(sock, sequence, 50)
+    sequence = home_robot_with_socket(sock, sequence, 50)
 
     t_send = threading.Thread(target=test_multithreading_interface_sender, args=(sock, stop_event, sequence_queue, sequence_lock, sequence), daemon=True)
     t_recv = threading.Thread(target=test_multithreading_interface_receiver, args=(sock, stop_event, sequence_queue, sequence_lock), daemon=True)

@@ -24,17 +24,10 @@ else:
 
 from settings import *
 from robot_motion_interface import *
+from robot_motion_tcp_client import *
 from stabilization import handle_stabilized_points
 from vision_QR import calculate_object_position_3_dof
 
-
-TEST_RUN = 1 # True == test (vision only) or False == run with robot
-CONNECTION_INTERVAL = 0.5 # s
-QR_TEXT = '001'
-QR_POSITION = [110.0, 60.0, 400.0] # [x, y, z] mm
-MAX_ALLOWED_OFFSET = 50 # mm
-MIN_ALLOWED_OFFSET = 2 # mm
-ALLOWED_SPEED = 30 # %
 
 
 def run():
@@ -46,6 +39,7 @@ def run():
 
     # additional variables
     list_with_stabilized_objects = []
+    sequence_queue = []
     sequence = 1 # ID of the motion command in RMI sequence
 
     # initializing QR code detector
@@ -57,10 +51,10 @@ def run():
         print("Cannot open camera!")
         exit()
 
-    if not TEST_RUN:
-        sock = initialize_connection()
+    if not TEST_VISION:
+        client = initialize_connection_with_tcp_client()
         # go to start position
-        sequence = home_robot_with_socket(sock, sequence, speed=ALLOWED_SPEED)
+        sequence = home_robot_with_tcp_client(client, sequence, speed=ALLOWED_SPEED)
     
     # start a while loop
     while(True):
@@ -95,18 +89,29 @@ def run():
 
             if len(stabilized_coords):
                 position_offset = [round(float(q1 - q2), 2) for (q1, q2) in zip(QR_POSITION, stabilized_coords[0])]
-                print(stabilized_coords[0])
+                print("[COORDS]", stabilized_coords[0])
             else:
                 position_offset = [0, 0, 0]
-            print(position_offset)
-                           
-            if not TEST_RUN and math.dist(position_offset, [0, 0, 0]) < MAX_ALLOWED_OFFSET \
-                            and math.dist(position_offset, [0, 0, 0]) > MIN_ALLOWED_OFFSET:
-                sequence = move_robot_cartesian_representation_with_socket(sock, sequence, is_motion_relative=True, 
-                                                #x = position_offset[2],
-                                                y = position_offset[0], 
-                                                z = position_offset[1], 
-                                                wait_for_response = not sequence % 5)
+            print("[OFFSET]", position_offset, "=>",  round(math.dist(position_offset, [0, 0, 0]), 2))
+            
+            # get all messages, remove complited sequences from queue
+            if not TEST_VISION:
+                while client.hasData():
+                    _, sequence_completed = get_message(client)
+                    sequence_queue = [s for s in sequence_queue if s not in sequence_completed]
+
+                # send new command
+                if len(sequence_queue) < SEQUENCE_MAX_LENGTH \
+                                and math.dist(position_offset, [0, 0, 0]) < MAX_ALLOWED_OFFSET \
+                                and math.dist(position_offset, [0, 0, 0]) > MIN_ALLOWED_OFFSET:
+                    sequence_queue.append(sequence)
+                    sequence = move_robot_cartesian_representation_with_tcp_client(client, sequence, 
+                                                    #x = -position_offset[2],
+                                                    y = position_offset[0], 
+                                                    z = position_offset[1],
+                                                    is_motion_relative=True)#, accuracy='CNT')
+
+                print("[QUEUE]", len(sequence_queue), sequence_queue)
 
         # measure time
         if time.time() > last_time_fps + 1:
@@ -121,8 +126,14 @@ def run():
             break
     
     # clean up
-    if not TEST_RUN:
-        close_connection(sock)
+    if not TEST_VISION:
+        time.sleep(1)
+        while client.hasData():
+            _, sequence_completed = get_message(client)
+            sequence_queue = [s for s in sequence_queue if s not in sequence_completed]
+        print("[QUEUE]", len(sequence_queue), sequence_queue)
+
+    close_connection_with_tcp_client(client)
     webcam.release()
     cv2.destroyAllWindows()
 

@@ -10,19 +10,23 @@ Its goal is to enhance the capabilities of an industrial robot by integrating ma
 v0.4 - Multithreading with TCP client
 
 ### Last changes:
+v0.4.3 - 26.03.2026
+
+* Updated robot control system after testing with real robot:
+    * switched the main program to TCP client communication interface;
+    * completed testing of robot control via the TCP client interface;
+    * moved vision and robot settings to common file;
+    * cleaned up and standardized terminal message output.
+
 v0.4.2 - 25.03.2026
 
-* Prepared resources for further tests with the robot.
-* More functions updates to allow to work in both interfaces.
+* Prepared resources for further tests with the robot:
+    * added test program for robot control via the TCP client interface;
+    * updated movement commands to work in both interfaces.
 
 v0.4.1 - 25.03.2026
 
 * Updated TCP client after testing with real robot.
-* Some functions have been updated to work in both interfaces.
-
-v0.4.0 - 15.03.2026
-
-* Added first version on TCP client;
-* Implemented TCP client for further tests with the robot;
-* Settings moved to one file.
+    * TCP client fixes;
+    * updated command parsing functions to work in both interfaces.
 

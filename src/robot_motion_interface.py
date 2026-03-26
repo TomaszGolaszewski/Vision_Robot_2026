@@ -59,10 +59,14 @@ FRC_CARTESIAN_REPRESENTATION_TEMPLATE_DICT = {
 
 def decode_error_id(error_id: int) -> None:
     """Print information about the error received."""
-    if error_id == 7126:
+    if error_id == 0:
+        pass
+    elif error_id == 7126:
         print("ERROR: 7126 - ??? robot is not mastered or its program buffer is full ???")
     elif error_id == 7015:
         print("ERROR: 7015 - ??? robot cannot move safely, you must select the program and move it manually to the home position ???")
+    elif error_id == 458878:
+        print("ERROR: 458878 - ??? Program too long! ???")
     elif error_id == 2556936:
         print("ERROR: 2556936 - TP enabled!")
     elif error_id == 2556937:
@@ -71,6 +75,10 @@ def decode_error_id(error_id: int) -> None:
         print("ERROR: 2556942 - ??? robot cannot move safely, you must select the program and move it manually to the home position ???")
     elif error_id == 2556943:
         print("ERROR: 2556943 - Last connection was not aborted!")
+    elif error_id == 2556950:
+        print("ERROR: 2556950 - Incorrect message structure!") 
+    elif error_id == 2556952:
+        print("ERROR: 2556952 - ??? Program too long! ???")
     elif error_id == 2556955:
         print("ERROR: 2556955 - Messages are being sent too fast!")
     elif error_id == 2556956:
@@ -82,12 +90,13 @@ def decode_error_id(error_id: int) -> None:
 
 # ===== CONNECTION =======================================================================
 
-def rmi_send(sock: socket.socket, message: str) -> None: 
+def rmi_send(sock: socket.socket, message: str, print_message: bool = False) -> None: 
     """Encode and send a message over an RMI socket."""
-    print("[SENDER]", message)
+    if print_message:
+        print("[SENDER]", message)
     sock.send(message.encode())
 
-def rmi_read(sock: socket.socket) -> dict: 
+def rmi_read(sock: socket.socket, print_message: bool = False) -> dict: 
     """Receive and decode a JSON message from an RMI socket.
     Return: error_id nad message.
     """
@@ -102,9 +111,10 @@ def rmi_read(sock: socket.socket) -> dict:
             decode_error_id(error_id)
             
             messages.append(message) 
-
-    message_decoded = json.dumps(messages, indent=2)
-    print(message_decoded)
+    
+    if print_message:
+        message_decoded = json.dumps(messages, indent=2)
+        print(message_decoded)
 
     return error_id, message
 
@@ -194,12 +204,9 @@ def move_robot_joint_representation_with_socket(sock: socket.socket, sequence: i
                         j4: float = 0.0, j5: float = 0.0, j6: float = 0.0, 
                         speed: int = 100, accuracy: str = 'FINE', wait_for_response: bool = True) -> int:
 
-    motion_dict = prepare_command_move_robot_joint_representation(
+    motion_json = prepare_command_move_robot_joint_representation(
                         sequence=sequence, is_motion_relative=is_motion_relative,
                         j1=j1, j2=j2, j3=j3, j4=j4, j5=j5, j6=j6, speed=speed, accuracy=accuracy)
-
-    motion_json = json.dumps(motion_dict, indent=2)
-    motion_json = motion_json + "\r\n"
 
     rmi_send(sock, motion_json)
     if wait_for_response:
@@ -254,8 +261,7 @@ def home_robot_with_socket(sock: socket.socket, sequence: int, speed: int = 100)
     """Move the robot to its HOME position."""
     rmi_send(sock, '{"Command" : "FRC_SetOverRide", "Value" : 10 } \r\n')
     rmi_read(sock)
-    sequence = move_robot_joint_representation_with_socket(sock, sequence, 
-                                        j1=-50, j2=25.0, j3=-40.0, j4=-118.0, j5=-61.0, j6=-11)
+    sequence = move_robot_joint_representation_with_socket(sock, sequence, **HOME_POSITION)
     time.sleep(1)
     rmi_send(sock, '{"Command" : "FRC_SetOverRide", "Value" : ' + str(speed) + ' } \r\n')
     rmi_read(sock)
@@ -294,7 +300,7 @@ def test_robot_motion_interface():
     # go to start position
     sequence = home_robot_with_socket(sock, sequence)
 
-    for _ in range(20):
+    for _ in range(100):
         r = random.randint(1, 3)
         sign = random.randint(0, 1)
         if not sign: sign = -1
@@ -494,6 +500,6 @@ def test_multithreading_interface():
 
 if __name__ == "__main__":
     # get_robot_position()
-    # move_robot_to_home_position()
+    move_robot_to_home_position()
     # test_robot_motion_interface()
-    test_multithreading_interface()
+    # test_multithreading_interface()

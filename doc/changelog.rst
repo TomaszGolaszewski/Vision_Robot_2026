@@ -1,6 +1,9 @@
 Changelog
 ======
 
+v0.4.4 - 11.04.2026
+------
+* Added debugging tool (for sequence 87).
 
 v0.4.3 - 26.03.2026
 ------

@@ -2,6 +2,24 @@ from settings import *
 from robot_motion_interface import *
 from tcp_client import *
 
+
+# ===== PARAMETRES =======================================================================
+
+def request_status(client: TcpClient) -> None: 
+    """Reqests robot's current position and data from the robot's position register."""
+
+    send_message(client, '{"Command": "FRC_ReadCartesianPosition"}\r\n')
+    send_message(client, '{"Command": "FRC_ReadPositionRegister", "RegisterNumber":%s}\r\n' % REGISTER_NUMBER)
+
+def parse_coordinates(position_to_parse: json, coordinates: list) -> None: 
+    """Extracts coordinate values from a JSON-like object and writes them into a list."""
+    coordinates[0] = position_to_parse.get("X", 0)
+    coordinates[1] = position_to_parse.get("Y", 0)
+    coordinates[2] = position_to_parse.get("Z", 0)
+    coordinates[3] = position_to_parse.get("W", 0)
+    coordinates[4] = position_to_parse.get("P", 0)
+    coordinates[5] = position_to_parse.get("R", 0)
+
 # ===== CONNECTION =======================================================================
 
 def get_new_port_number() -> int:
@@ -22,15 +40,14 @@ def send_message(client: TcpClient, message: str) -> None:
     """Encode and send a message over an RMI socket."""
     client.writeMessage(message.encode())
 
-def get_message(client: TcpClient, print_message: bool = False) -> list[list, list]: 
-    """Receive and decode a JSON message from an RMI socket.
-    Return: error_id nad message.
+def get_message(client: TcpClient, print_message: bool = False) -> list: 
+    """Receive and decode a JSON message from an RMI TCP client.
+    Return: list of error_ids.
     """
     data = client.readMessage()
 
     messages = [] 
     error_list = []
-    sequence_list = []
     for line in data.splitlines(): 
         if line.strip(): 
             message = json.loads(line)
@@ -42,16 +59,53 @@ def get_message(client: TcpClient, print_message: bool = False) -> list[list, li
                 decode_error_id(error_id)
             else:
                 print(json.dumps(message, indent=2))
-
-            sequence_id = message.get("SequenceID", None)
-            if sequence_id:
-                sequence_list.append(sequence_id)
     
     if print_message:
         message_decoded = json.dumps(messages, indent=2)
         print(message_decoded)
 
-    return error_list, sequence_list
+    return error_list
+
+def get_and_handle_message_for_robot_motion(client: TcpClient, 
+                    robot_position: list, robot_forces: list, sequence_queue: list,
+                    print_message: bool = False) -> list:
+    """Receive and decode a JSON message from an RMI TCP client.
+    Return: list of sequence ids waiting in the queue.
+    """
+    sequence_list = []
+    while client.hasData():
+        data = client.readMessage()
+        messages = [] 
+        error_list = []
+
+        for line in data.splitlines(): 
+            if line.strip(): 
+                message = json.loads(line)
+                messages.append(message) 
+
+                if message.get("ErrorID", None) is not None:
+                    error_id = message["ErrorID"]
+                    error_list.append(error_id)
+                    decode_error_id(error_id)
+                else:
+                    print(json.dumps(message, indent=2))
+
+                sequence_id = message.get("SequenceID", None)
+                if sequence_id:
+                    sequence_list.append(sequence_id)
+
+                command = message.get("Command", None)
+                position = message.get("Position", None)
+                if command == "FRC_ReadCartesianPosition" and position:
+                    parse_coordinates(position, robot_position)
+                if command == "FRC_ReadPositionRegister" and position:
+                    parse_coordinates(position, robot_forces)
+    
+        if print_message:
+            message_decoded = json.dumps(messages, indent=2)
+            print(message_decoded)
+    
+    return [s for s in sequence_queue if s not in sequence_list]
 
 def initialize_connection_with_tcp_client() -> TcpClient:
     """Create TCP client object, wait until all errors on robot are resolved and initialize the connection.
@@ -74,7 +128,7 @@ def initialize_connection_with_tcp_client() -> TcpClient:
     while error_id:
         send_message(client, '{"Command": "FRC_Initialize"}\r\n')
         time.sleep(0.1)
-        error_list, _ = get_message(client)
+        error_list = get_message(client)
         error_id = error_list[0]
         if error_id == 0:
             print("[STATUS] Initialized")
@@ -98,7 +152,7 @@ def close_connection_with_tcp_client(client: TcpClient) -> None:
     # close the connection on robot side
     send_message(client, '{"Communication": "FRC_Disconnect"}\r\n')
     time.sleep(0.1)
-    error_list, _ = get_message(client)
+    error_list = get_message(client)
     if error_list[0] == 0:
         print("[STATUS] Disconnected")
     time.sleep(0.1)
@@ -163,6 +217,8 @@ def home_robot_with_tcp_client(client: TcpClient, sequence: int, speed: int = 10
 def test_robot_motion_tcp_client():
     """Test connection via TCP client with the robot and its functions."""
 
+    robot_current_position = [0, 0, 0, 0, 0, 0]
+    robot_current_forces = [0, 0, 0, 0, 0, 0]
     sequence_queue = []
     sequence = 1 # ID of the motion command in RMI sequence
 
@@ -177,12 +233,15 @@ def test_robot_motion_tcp_client():
         sign = random.randint(0, 1)
         if not sign: sign = -1
         
-        while client.hasData():
-            _, sequence_completed = get_message(client)
-            sequence_queue = [s for s in sequence_queue if s not in sequence_completed]
-
+        request_status(client)
+        time.sleep(0.02) # time needed to receive response
+        sequence_queue = get_and_handle_message_for_robot_motion(client, 
+                    robot_current_position, robot_current_forces, sequence_queue)
+            
         sequence_queue.append(sequence)
         print("[QUEUE]", len(sequence_queue), sequence_queue)
+        print("[POSITION]", robot_current_position)
+        # print("[FORCES]", robot_current_forces)
         if r == 1:
             sequence = move_robot_cartesian_representation_with_tcp_client(client, sequence, 
                         is_motion_relative=True, x=sign*jump_distance, accuracy='CNT')
@@ -195,13 +254,13 @@ def test_robot_motion_tcp_client():
         time.sleep(0.1)
 
     sequence_queue.append(sequence)
+    print("[QUEUE]", len(sequence_queue), sequence_queue)
     sequence = move_robot_cartesian_representation_with_tcp_client(client, sequence,
                         is_motion_relative=True, z=50.0)
     time.sleep(2)
 
-    while client.hasData():
-        _, sequence_completed = get_message(client)
-        sequence_queue = [s for s in sequence_queue if s not in sequence_completed]
+    sequence_queue = get_and_handle_message_for_robot_motion(client, 
+                    robot_current_position, robot_current_forces, sequence_queue)
     print("[QUEUE]", len(sequence_queue), sequence_queue)
 
     close_connection_with_tcp_client(client)

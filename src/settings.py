@@ -1,7 +1,7 @@
 # Global variables
 
 # Connection
-IP_ADDRESS = '127.0.0.1'
+IP_ADDRESS = '192.168.11.101'
 PORT_CONNECTION_PROCEDURE = 16001
 
 # Vision
@@ -14,6 +14,7 @@ MIN_ALLOWED_OFFSET = 2 # mm
 ALLOWED_SPEED = 100 # %
 
 # Robot
+REGISTER_NUMBER = 1
 SEQUENCE_MAX_LENGTH = 7
 HOME_POSITION = {
 	"j1": -50.5, 

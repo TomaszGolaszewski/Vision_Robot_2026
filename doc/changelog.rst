@@ -1,6 +1,14 @@
 Changelog
 ======
 
+v0.4.5 - 19.04.2026
+------
+* Added new functions to retrieve and parse data:
+    * request_status() - reqests data from robot;
+    * get_and_handle_message_for_robot_motion():
+        * function retrieves the robot's current position...
+        * ... and data from the robot's position register.
+
 v0.4.4 - 11.04.2026
 ------
 * Added debugging tool (for sequence 87).

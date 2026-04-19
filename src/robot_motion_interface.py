@@ -312,6 +312,18 @@ def test_robot_motion_interface():
         else:
             sequence = move_robot_cartesian_representation_with_socket(sock, sequence, is_motion_relative=True, z=sign*5.0) #, accuracy='CNT')
 
+    # time.sleep(0.5)
+    # time_pos_start = time.time()
+    # rmi_send(sock, '{"Command": "FRC_ReadCartesianPosition"}\r\n')
+    # rmi_read(sock)
+    # print(">>POS: ", time.time() - time_pos_start)
+    # time.sleep(0.5)
+    # time_reg_start = time.time()
+    # rmi_send(sock, '{"Command": "FRC_ReadPositionRegister", "RegisterNumber": 1}\r\n')
+    # rmi_read(sock)
+    # print(">>REG: ", time.time() - time_reg_start)
+    # time.sleep(0.5)
+
     close_connection(sock)
 
 

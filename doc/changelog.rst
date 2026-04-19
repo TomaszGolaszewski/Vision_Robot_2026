@@ -1,6 +1,11 @@
 Changelog
 ======
 
+v0.4.6 - 19.04.2026
+------
+* Added new error reference table;
+* Cleaned up the code.
+
 v0.4.5 - 19.04.2026
 ------
 * Added new functions to retrieve and parse data:

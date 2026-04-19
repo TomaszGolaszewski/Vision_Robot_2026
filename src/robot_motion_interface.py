@@ -57,36 +57,84 @@ FRC_CARTESIAN_REPRESENTATION_TEMPLATE_DICT = {
     "TermValue": 0, # 1-100
 }
 
+RMI_ERRORID_REFERENCE_TABLE = {
+    2556929: "RMIT-001 Internal System Error.",
+    2556930: "RMIT-002 Invalid UTool Number.",
+    2556931: "RMIT-003 Invalid UFrame Number.",
+    2556932: "RMIT-004 Invalid Position Register.",
+    2556933: "RMIT-005 Invalid Speed Override.",
+    2556934: "RMIT-006 Cannot Execute TP program.",
+    2556935: "RMIT-007 Controller Servo is Off.",
+    2556936: "RMIT-008 Teach Pendant is Enabled.",
+    2556937: "RMIT-009 RMI is Not Running.",
+    2556938: "RMIT-010 TP Program is Not Paused.",
+    2556939: "RMIT-011 Cannot Resume TP Program.",
+    2556940: "RMIT-012 Cannot Reset Controller.",
+    2556941: "RMIT-013 Invalid RMI Command.",
+    2556942: "RMIT-014 RMI Command Fail.",
+    2556943: "RMIT-015 Invalid Controller State.",
+    2556944: "RMIT-016 Please Cycle Power.",
+    2556945: "RMIT-017 Invalid Payload Schedule.",
+    2556946: "RMIT-018 Invalid Motion Option.",
+    2556947: "RMIT-019 Invalid Vision Register.",
+    2556948: "RMIT-020 Invalid RMI Instruction.",
+    2556949: "RMIT-021 Invalid Value.",
+    2556950: "RMIT-022 Invalid Text String",
+    2556951: "RMIT-023 Invalid Position Data",
+    2556952: "RMIT-024 RMI is In HOLD State",
+    2556953: "RMIT-025 Remote Device Disconnected.",
+    2556954: "RMIT-026 Robot is Already Connected.",
+    2556955: "RMIT-027 Wait for Command Done.",
+    2556956: "RMIT-028 Wait for Instruction Done.",
+    2556957: "RMIT-029 Invalid sequence ID number.",
+    2556958: "RMIT-030 Invalid Speed Type.",
+    2556959: "RMIT-031 Invalid Speed Value.",
+    2556960: "RMIT-032 Invalid Term Type.",
+    2556961: "RMIT-033 Invalid Term Value.",
+    2556962: "RMIT-034 Invalid LCB Port Type.",
+    2556963: "RMIT-035 Invalid ACC Value.",
+    2556964: "RMIT-036 Invalid Destination Position",
+    2556965: "RMIT-037 Invalid VIA Position.",
+    2556966: "RMIT-038 Invalid Port Number.",
+    2556967: "RMIT-039 Invalid Group Number",
+    2556968: "RMIT-040 Invalid Group Mask",
+    2556969: "RMIT-041 Joint motion with COORD",
+    2556970: "RMIT-042 Incremental motn with COORD",
+    2556971: "RMIT-043 Robot in Single Step Mode",
+    2556972: "RMIT-044 Invalid Position Data Type",
+    2556973: "RMIT-045 Not Ready for ASCII Packet",
+    2556974: "RMIT-046 ASCII Conversion Failed",
+    2556975: "RMIT-047 Invalid ASCII Instruction",
+    2556976: "RMIT-048 Invalid Number of Groups",
+    2556977: "RMIT-049 Invalid Instruction packet",
+    2556978: "RMIT-050 Invalid ASCII packet",
+    2556979: "RMIT-051 Invalid ASCII string size",
+    2556980: "RMIT-052 Invalid Application Tool",
+    2556981: "RMIT-053 Invalid Call Program Name",
+    2556982: "RMIT-054 Joint Motion with ALIM",
+    2256983: "RMIT-055 ALIM option is not loaded",
+    2256984: "RMIT-056 Need to finish S-motion",
+    2256985: "RMIT-057 Spline option is not loaded",
+    7004: "MEMO-004 Specific program is in use",
+    7015: "MEMO-015 Program already exists",
+}
+
 def decode_error_id(error_id: int) -> None:
     """Print information about the error received."""
     if error_id == 0:
         pass
     elif error_id == 7126:
-        print("ERROR: 7126 - ??? robot is not mastered or its program buffer is full ???")
-    elif error_id == 7015:
-        print("ERROR: 7015 - ??? robot cannot move safely, you must select the program and move it manually to the home position ???")
+        print("[ERROR: 7126] ??? robot is not mastered or its program buffer is full or memory full???")
     elif error_id == 458878:
-        print("ERROR: 458878 - ??? Program too long! ???")
-    elif error_id == 2556936:
-        print("ERROR: 2556936 - TP enabled!")
-    elif error_id == 2556937:
-        print("ERROR: 2556937 - ??? some errors on TP ???")
-    elif error_id == 2556942:
-        print("ERROR: 2556942 - ??? robot cannot move safely, you must select the program and move it manually to the home position ???")
-    elif error_id == 2556943:
-        print("ERROR: 2556943 - Last connection was not aborted!")
-    elif error_id == 2556950:
-        print("ERROR: 2556950 - Incorrect message structure!") 
-    elif error_id == 2556952:
-        print("ERROR: 2556952 - ??? Program too long! ???")
-    elif error_id == 2556955:
-        print("ERROR: 2556955 - Messages are being sent too fast!")
-    elif error_id == 2556956:
-        print("ERROR: 2556956 - ??? motion aborted ???")
-    elif error_id == 2556957:
-        print("ERROR: 2556957 - Invalid SequenceID, length of path equals zero or RMI_MOVE program is open!")
+        print("[ERROR: 458878] ??? Program too long or memory full ???")
+    elif error_id in RMI_ERRORID_REFERENCE_TABLE:
+        print(f"[ERROR: {error_id}] {RMI_ERRORID_REFERENCE_TABLE[error_id]}")
+        if error_id == 2556942:
+            print("[ERROR: 2556942] ??? robot cannot move safely, you must select the program and move it manually to the home position ???")
+        elif error_id == 2556943:
+            print("[ERROR: 2556943] Last connection was not aborted!")
     else:
-        print(f"ERROR: {error_id} - NEW ERROR !!!")
+        print(f"[ERROR: {error_id}] NEW ERROR !!!")
 
 # ===== CONNECTION =======================================================================
 
@@ -306,130 +354,33 @@ def test_robot_motion_interface():
         if not sign: sign = -1
         
         if r == 1:
-            sequence = move_robot_cartesian_representation_with_socket(sock, sequence, is_motion_relative=True, x=sign*5.0) #, accuracy='CNT')
+            sequence = move_robot_cartesian_representation_with_socket(sock, sequence, is_motion_relative=True, x=sign*5.0)
         elif r == 2:
-            sequence = move_robot_cartesian_representation_with_socket(sock, sequence, is_motion_relative=True, y=sign*5.0) #, accuracy='CNT')
+            sequence = move_robot_cartesian_representation_with_socket(sock, sequence, is_motion_relative=True, y=sign*5.0)
         else:
-            sequence = move_robot_cartesian_representation_with_socket(sock, sequence, is_motion_relative=True, z=sign*5.0) #, accuracy='CNT')
+            sequence = move_robot_cartesian_representation_with_socket(sock, sequence, is_motion_relative=True, z=sign*5.0)
+
+    # time.sleep(0.5)
+    # rmi_send(sock, '{"Command" : "FRC_GetStatus"} \r\n')
+    # rmi_read(sock)
+    # "TPMode": 0, - ok, "TPMode": 1, enabled
 
     # time.sleep(0.5)
     # time_pos_start = time.time()
     # rmi_send(sock, '{"Command": "FRC_ReadCartesianPosition"}\r\n')
+    # # rmi_send(sock, '{"Command": "FRC_ReadJointAngles"}\r\n')
     # rmi_read(sock)
     # print(">>POS: ", time.time() - time_pos_start)
+
     # time.sleep(0.5)
     # time_reg_start = time.time()
     # rmi_send(sock, '{"Command": "FRC_ReadPositionRegister", "RegisterNumber": 1}\r\n')
     # rmi_read(sock)
     # print(">>REG: ", time.time() - time_reg_start)
+
     # time.sleep(0.5)
 
     close_connection(sock)
-
-
-def test_robot_motion_interface_old():
-    """Test connection with the robot and its functions."""
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s1:
-        s1.connect((IP_ADDRESS, PORT_CONNECTION_PROCEDURE))
-        rmi_send(s1, '{"Communication": "FRC_Connect"}\r\n')
-        error_id, msg = rmi_read(s1)
-
-        if error_id == 0:
-            print("Connected")
-
-        # read port num  
-        port_num = msg["PortNumber"]
-
-    time.sleep(3)
-
-    # set new connection with new port
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s2:
-        s2.connect((IP_ADDRESS, port_num))
-
-        time.sleep(1)
-        rmi_send(s2, '{"Command": "FRC_Abort"}\r\n')
-        rmi_read(s2)
-        time.sleep(1)
-
-        # rmi_send(s2, '{"Command" : "FRC_ReadError" } \r\n')
-        # msg = rmi_read(s2)
-        # time.sleep(1)
-
-        # rmi_send(s2, '{"Command" : "FRC_GetStatus"} \r\n')
-        # msg = rmi_read(s2)
-        # time.sleep(1)
-        # "TPMode": 0, - ok, "TPMode": 1, enabled
-
-        # rmi_send(s2, '{"Command": "FRC_ReadCartesianPosition"}\r\n')
-        # rmi_read(s2)
-        # time.sleep(1)
-
-        # rmi_send(s2, '{"Command": "FRC_ReadJointAngles"}\r\n')
-        # rmi_read(s2)
-        # time.sleep(1)
-        
-        error_id = 1
-        while error_id:
-            rmi_send(s2, '{"Command": "FRC_Initialize"}\r\n')
-            error_id, msg = rmi_read(s2)
-            if error_id == 0:
-                print("Initialized")
-                time.sleep(1)
-            else:
-                time.sleep(5)
-
-        # go to start position
-        sequence = 1 # ID of the motion command in RMI sequence
-        rmi_send(s2, '{"Command" : "FRC_SetOverRide", "Value" : 10 } \r\n')
-        rmi_read(s2)
-        sequence = move_robot_joint_representation_with_socket(s2, sequence, 
-                                            j1=-40.0, j2=5.0, j3=-30.0, j4=-90.0, j5=-80.0, j6=100.0)
-        time.sleep(1)
-        rmi_send(s2, '{"Command" : "FRC_SetOverRide", "Value" : 50 } \r\n')
-        rmi_read(s2)
-
-        # sequence = move_robot_joint_representation_with_socket(s2, sequence, is_motion_relative=True, j1=10.0)
-        # time.sleep(3)
-        # sequence = move_robot_joint_representation_with_socket(s2, sequence, is_motion_relative=True, j3=10.0)
-        # time.sleep(3)
-        # sequence = move_robot_joint_representation_with_socket(s2, sequence, is_motion_relative=True, j1=-10.0)
-        # time.sleep(3)
-        # sequence = move_robot_joint_representation_with_socket(s2, sequence, is_motion_relative=True, j3=-10.0)
-        # time.sleep(3)
-        
-        for _ in range(5):
-            # sequence = move_robot_joint_representation_with_socket(s2, sequence, is_motion_relative=True, j1=20.0, accuracy='CNT')
-            # sequence = move_robot_joint_representation_with_socket(s2, sequence, is_motion_relative=True, j3=-20.0, accuracy='CNT')
-            # sequence = move_robot_joint_representation_with_socket(s2, sequence, is_motion_relative=True, j1=-20.0, accuracy='CNT')
-            # sequence = move_robot_joint_representation_with_socket(s2, sequence, is_motion_relative=True, j3=20.0, accuracy='CNT')
-
-            sequence = move_robot_cartesian_representation_with_socket(s2, sequence, is_motion_relative=True, x=200.0, accuracy='CNT')
-            sequence = move_robot_cartesian_representation_with_socket(s2, sequence, is_motion_relative=True, y=200.0, accuracy='CNT')
-            sequence = move_robot_cartesian_representation_with_socket(s2, sequence, is_motion_relative=True, x=-200.0, accuracy='CNT')
-            sequence = move_robot_cartesian_representation_with_socket(s2, sequence, is_motion_relative=True, y=-200.0, accuracy='CNT')
-
-            # sequence = move_robot_cartesian_representation_with_socket(s2, sequence, is_motion_relative=True, w=10.0)
-            # sequence = move_robot_cartesian_representation_with_socket(s2, sequence, is_motion_relative=True, w=-10.0)
-            # sequence = move_robot_cartesian_representation_with_socket(s2, sequence, is_motion_relative=True, p=10.0)
-            # sequence = move_robot_cartesian_representation_with_socket(s2, sequence, is_motion_relative=True, p=-10.0)
-            # sequence = move_robot_cartesian_representation_with_socket(s2, sequence, is_motion_relative=True, r=10.0)
-            # sequence = move_robot_cartesian_representation_with_socket(s2, sequence, is_motion_relative=True, r=-10.0)
-
-            # sequence = move_robot_cartesian_representation_with_socket(s2, sequence, 
-            #                           x=640.0, y=-50.0, z=300.0, w=-100.0, p=-70.0, r=-35.0, accuracy='CNT')
-            # sequence = move_robot_cartesian_representation_with_socket(s2, sequence, 
-            #                           x=640.0, y=-50.0, z=400.0, w=-100.0, p=-70.0, r=-35.0, accuracy='CNT')
-            # sequence = move_robot_cartesian_representation_with_socket(s2, sequence, 
-            #                           x=640.0, y=-150.0, z=400.0, w=-100.0, p=-70.0, r=-35.0, accuracy='CNT')
-            # sequence = move_robot_cartesian_representation_with_socket(s2, sequence, 
-            #                           x=640.0, y=-150.0, z=300.0, w=-100.0, p=-70.0, r=-35.0, accuracy='CNT')
-
-        time.sleep(3)
-        rmi_send(s2, '{"Command": "FRC_Abort"}\r\n')
-        rmi_read(s2)
-        time.sleep(1)
-        rmi_send(s2, '{"Communication": "FRC_Disconnect"}\r\n')
-        rmi_read(s2)
 
 # ===== TEST MULTITHREADING =======================================================================
 

@@ -265,55 +265,6 @@ def test_robot_motion_tcp_client():
 
     close_connection_with_tcp_client(client)
 
-
-def test_robot_motion_tcp_client_old():
-    """Test connection via TCP client with the robot and its functions."""
-
-    new_port = get_new_port_number()
-    time.sleep(0.1)
-    client = TcpClient(IP_ADDRESS, new_port)
-    #client.registerCallback(lambda: print("New message!"))
-    time.sleep(0.1)
-
-    # cancel all old commands
-    send_message(client, '{"Command": "FRC_Abort"}\r\n')
-    time.sleep(0.1)
-    get_message(client)
-    time.sleep(0.1)
-
-    # initialize connection
-    error_id = 1
-    while error_id:
-        send_message(client, '{"Command": "FRC_Initialize"}\r\n')
-        time.sleep(0.1)
-        error_list, _ = get_message(client)
-        error_id = error_list[0]
-        if error_id == 0:
-            print("Initialized")
-            time.sleep(0.1)
-        else:
-            time.sleep(2)
-
-    # while client.hasData():
-    #     time.sleep(0.1)
-    #     msg = client.readMessage()
-    #     print(msg)
-
-    # cancel all commands
-    send_message(client, '{"Command": "FRC_Abort"}\r\n')
-    time.sleep(0.1)
-    get_message(client)
-    time.sleep(0.1)
-
-    # close the connection on robot side
-    send_message(client, '{"Communication": "FRC_Disconnect"}\r\n')
-    time.sleep(0.1)
-    get_message(client)
-    time.sleep(0.1)
-
-    client.cancel()
-    client.join(timeout=5.0)
-
 # ===== MAIN =======================================================================
 
 if __name__ == "__main__":

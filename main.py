@@ -37,10 +37,14 @@ def run():
     last_time_fps = time.time()
     last_time_connection = time.time()
 
-    # additional variables
-    list_with_stabilized_objects = []
+    # robot variables
+    robot_current_position = [0, 0, 0, 0, 0, 0]
+    robot_current_forces = [0, 0, 0, 0, 0, 0]
     sequence_queue = []
     sequence = 1 # ID of the motion command in RMI sequence
+
+    # additional variables
+    list_with_stabilized_objects = []
 
     # initializing QR code detector
     qr_detect = cv2.QRCodeDetector()
@@ -96,9 +100,14 @@ def run():
             
             # get all messages, remove complited sequences from queue
             if not TEST_VISION:
-                while client.hasData():
-                    _, sequence_completed = get_message(client)
-                    sequence_queue = [s for s in sequence_queue if s not in sequence_completed]
+                request_status(client)
+                time.sleep(0.02) # time needed to receive response
+                sequence_queue = get_and_handle_message_for_robot_motion(client, 
+                            robot_current_position, robot_current_forces, sequence_queue)
+                    
+                print("[QUEUE]", len(sequence_queue), sequence_queue)
+                print("[POSITION]", robot_current_position)
+                # print("[FORCES]", robot_current_forces)
 
                 # send new command
                 if len(sequence_queue) < SEQUENCE_MAX_LENGTH \
@@ -106,10 +115,13 @@ def run():
                                 and math.dist(position_offset, [0, 0, 0]) > MIN_ALLOWED_OFFSET:
                     sequence_queue.append(sequence)
                     sequence = move_robot_cartesian_representation_with_tcp_client(client, sequence, 
-                                                    #x = -position_offset[2],
-                                                    y = position_offset[0], 
-                                                    z = position_offset[1],
-                                                    is_motion_relative=True)#, accuracy='CNT')
+                                                    x = robot_current_position[0],# - position_offset[2],
+                                                    y = robot_current_position[1] + position_offset[0], 
+                                                    z = robot_current_position[2] + position_offset[1],
+                                                    w = robot_current_position[3],
+                                                    p = robot_current_position[4],
+                                                    r = robot_current_position[5],
+                                                    is_motion_relative=False, accuracy='CNT')
 
                 print("[QUEUE]", len(sequence_queue), sequence_queue)
 
@@ -128,12 +140,11 @@ def run():
     # clean up
     if not TEST_VISION:
         time.sleep(1)
-        while client.hasData():
-            _, sequence_completed = get_message(client)
-            sequence_queue = [s for s in sequence_queue if s not in sequence_completed]
+        sequence_queue = get_and_handle_message_for_robot_motion(client, 
+                    robot_current_position, robot_current_forces, sequence_queue)
         print("[QUEUE]", len(sequence_queue), sequence_queue)
 
-    close_connection_with_tcp_client(client)
+        close_connection_with_tcp_client(client)
     webcam.release()
     cv2.destroyAllWindows()
 

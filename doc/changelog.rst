@@ -1,6 +1,12 @@
 Changelog
 ======
 
+v0.4.7 - 26.04.2026
+------
+* Prepared resources for further tests with the robot:
+    * updated main program with improvements made in previous tests;
+    * changed method of setting movement to global coordinates instead of relative ones.
+
 v0.4.6 - 19.04.2026
 ------
 * Added new error reference table;

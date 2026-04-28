@@ -1,6 +1,11 @@
 Changelog
 ======
 
+v0.4.8 - 28.04.2026
+------
+* Tested version with moving average of relative QR code position (milestones).
+* Added version with moving average of global QR code position (also moved to milestones).
+
 v0.4.7 - 26.04.2026
 ------
 * Prepared resources for further tests with the robot:

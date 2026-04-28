@@ -1,6 +1,7 @@
 # Vision Robot 2026
 # By Tomasz Golaszewski
-# 12.2025 -
+# 12.2025 - 26.04.2026
+# Main program version with moving average of relative QR code position.
 
 
 import os
@@ -63,9 +64,6 @@ def run():
     # start a while loop
     while(True):
 
-        if not TEST_VISION:
-            request_status(client)
-
         # reading the video from the webcam in image frames
         is_frame, image_original_frame = webcam.read()
         image_processed = image_original_frame.copy()
@@ -75,26 +73,14 @@ def run():
 
         if decoded_text[:3] == QR_TEXT:
             raw_coord = calculate_object_position_3_dof(vertices_coords[0])
+            # x, y, z = raw_coord
+            # print("{:.2f}".format(x), "{:.2f}".format(y), "{:.2f}".format(z))
 
+            list_with_stabilized_objects, stabilized_coords = handle_stabilized_points(
+                                                                list_with_stabilized_objects, [raw_coord]) 
             # draw outlines of the codes
             image_processed = cv2.polylines(image_original_frame, vertices_coords.astype(int), True, (0, 255, 0), 3)
 
-            if not TEST_VISION:
-                sequence_queue = get_and_handle_message_for_robot_motion(client, 
-                            robot_current_position, robot_current_forces, sequence_queue)
-                print("[QUEUE]", len(sequence_queue), sequence_queue)
-                print("[ROBOT POSITION]", robot_current_position)
-                # print("[FORCES]", robot_current_forces)
-
-                raw_qr_global_coords = robot_current_position.copy()  
-                raw_qr_global_coords[0] = raw_qr_global_coords[0] - QR_POSITION[2] + raw_coord[2]
-                raw_qr_global_coords[1] = raw_qr_global_coords[1] + QR_POSITION[0] - raw_coord[0]
-                raw_qr_global_coords[2] = raw_qr_global_coords[2] + QR_POSITION[1] - raw_coord[1]
-            else:
-                raw_qr_global_coords = raw_coord
-
-            list_with_stabilized_objects, stabilized_coords = handle_stabilized_points(
-                                                                list_with_stabilized_objects, [raw_qr_global_coords]) 
         else:
             list_with_stabilized_objects, stabilized_coords = handle_stabilized_points(
                                                                 list_with_stabilized_objects, [])
@@ -105,17 +91,34 @@ def run():
         # connection
         if time.time() > last_time_connection + CONNECTION_INTERVAL:
             last_time_connection = time.time()
+
+            if len(stabilized_coords):
+                position_offset = [round(float(q1 - q2), 2) for (q1, q2) in zip(QR_POSITION, stabilized_coords[0])]
+                print("[COORDS]", stabilized_coords[0])
+            else:
+                position_offset = [0, 0, 0]
+            print("[OFFSET]", position_offset, "=>",  round(math.dist(position_offset, [0, 0, 0]), 2))
             
             # get all messages, remove complited sequences from queue
             if not TEST_VISION:
+                request_status(client)
+                time.sleep(0.02) # time needed to receive response
+                sequence_queue = get_and_handle_message_for_robot_motion(client, 
+                            robot_current_position, robot_current_forces, sequence_queue)
+                    
+                print("[QUEUE]", len(sequence_queue), sequence_queue)
+                print("[POSITION]", robot_current_position)
+                # print("[FORCES]", robot_current_forces)
 
                 # send new command
-                if len(sequence_queue) < SEQUENCE_MAX_LENGTH:
+                if len(sequence_queue) < SEQUENCE_MAX_LENGTH \
+                                and math.dist(position_offset, [0, 0, 0]) < MAX_ALLOWED_OFFSET \
+                                and math.dist(position_offset, [0, 0, 0]) > MIN_ALLOWED_OFFSET:
                     sequence_queue.append(sequence)
                     sequence = move_robot_cartesian_representation_with_tcp_client(client, sequence, 
-                                                    x = stabilized_coords[0][0] if len(stabilized_coords) else robot_current_position[0],
-                                                    y = stabilized_coords[0][1] if len(stabilized_coords) else robot_current_position[1],
-                                                    z = stabilized_coords[0][2] if len(stabilized_coords) else robot_current_position[2],
+                                                    x = robot_current_position[0] - position_offset[2],
+                                                    y = robot_current_position[1] + position_offset[0], 
+                                                    z = robot_current_position[2] + position_offset[1],
                                                     w = robot_current_position[3],
                                                     p = robot_current_position[4],
                                                     r = robot_current_position[5],

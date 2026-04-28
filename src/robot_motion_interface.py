@@ -156,7 +156,9 @@ def rmi_read(sock: socket.socket, print_message: bool = False) -> dict:
             message = json.loads(line)
 
             error_id = message["ErrorID"]
-            decode_error_id(error_id)
+            if error_id:
+                print(json.dumps(message, indent=2))
+                decode_error_id(error_id)
             
             messages.append(message) 
     
@@ -333,7 +335,7 @@ def print_robot_position():
 def move_robot_to_home_position():
     """Connect with robot and move it to its HOME position."""
     sock = initialize_connection()
-    home_robot_with_socket(sock, 1)
+    home_robot_with_socket(sock, 1, ALLOWED_SPEED)
     close_connection(sock)
 
 def test_robot_motion_interface():

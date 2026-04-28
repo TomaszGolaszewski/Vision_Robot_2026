@@ -1,6 +1,7 @@
 # Vision Robot 2026
 # By Tomasz Golaszewski
-# 12.2025 -
+# 12.2025 - 28.04.2026
+# Main program version with moving average of global QR code position.
 
 
 import os

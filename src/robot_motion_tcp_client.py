@@ -56,7 +56,9 @@ def get_message(client: TcpClient, print_message: bool = False) -> list:
             if message.get("ErrorID", None) is not None:
                 error_id = message["ErrorID"]
                 error_list.append(error_id)
-                decode_error_id(error_id)
+                if error_id:
+                    print(json.dumps(message, indent=2))
+                    decode_error_id(error_id)
             else:
                 print(json.dumps(message, indent=2))
     
@@ -86,7 +88,9 @@ def get_and_handle_message_for_robot_motion(client: TcpClient,
                 if message.get("ErrorID", None) is not None:
                     error_id = message["ErrorID"]
                     error_list.append(error_id)
-                    decode_error_id(error_id)
+                    if error_id:
+                        print(json.dumps(message, indent=2))
+                        decode_error_id(error_id)
                 else:
                     print(json.dumps(message, indent=2))
 
@@ -225,7 +229,7 @@ def test_robot_motion_tcp_client():
     client = initialize_connection_with_tcp_client()
 
     # go to start position
-    sequence = home_robot_with_tcp_client(client, sequence, 50)
+    sequence = home_robot_with_tcp_client(client, sequence, ALLOWED_SPEED)
 
     for _ in range(50):
         jump_distance = 5.0

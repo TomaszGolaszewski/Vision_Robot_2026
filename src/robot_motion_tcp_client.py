@@ -269,7 +269,59 @@ def test_robot_motion_tcp_client():
 
     close_connection_with_tcp_client(client)
 
+def test_robot_forces_tcp_client():
+    """Test the robot's movement while maintaining constant force."""
+
+    robot_current_position = [0, 0, 0, 0, 0, 0]
+    robot_current_forces = [0, 0, 0, 0, 0, 0]
+    sequence_queue = []
+    sequence = 1 # ID of the motion command in RMI sequence
+
+    client = initialize_connection_with_tcp_client()
+
+    # go to start position
+    sequence = home_robot_with_tcp_client(client, sequence, ALLOWED_SPEED)
+
+    for _ in range(200):
+        jump_distance = 5.0
+        force_distance = 5.0
+        force_threshold = 1
+        k = 1
+
+        request_status(client)
+        time.sleep(0.02) # time needed to receive response
+        sequence_queue = get_and_handle_message_for_robot_motion(client, 
+                        robot_current_position, robot_current_forces, sequence_queue)
+        sequence_queue.append(sequence)
+
+        # print("[QUEUE]", len(sequence_queue), sequence_queue)
+        # print("[POSITION]", robot_current_position)
+        print("[FORCES]", robot_current_forces[0])
+        force_x = robot_current_forces[0]
+        print((force_threshold + force_x) / k)
+
+        sequence = move_robot_cartesian_representation_with_tcp_client(client, sequence, 
+                        is_motion_relative=True, 
+                        # x = force_distance if abs(force_x) < force_threshold else 0.0,
+                        x = (force_threshold + force_x) / k,
+                        y = jump_distance if sequence < 100 else -jump_distance, 
+                        accuracy='CNT')
+        time.sleep(0.1)
+
+    sequence_queue.append(sequence)
+    print("[QUEUE]", len(sequence_queue), sequence_queue)
+    sequence = move_robot_cartesian_representation_with_tcp_client(client, sequence,
+                        is_motion_relative=True, z=50.0)
+    time.sleep(2)
+
+    sequence_queue = get_and_handle_message_for_robot_motion(client, 
+                    robot_current_position, robot_current_forces, sequence_queue)
+    print("[QUEUE]", len(sequence_queue), sequence_queue)
+
+    close_connection_with_tcp_client(client)
+
 # ===== MAIN =======================================================================
 
 if __name__ == "__main__":
-    test_robot_motion_tcp_client()
+    # test_robot_motion_tcp_client()
+    test_robot_forces_tcp_client()

@@ -10,6 +10,10 @@ Its goal is to enhance the capabilities of an industrial robot by integrating ma
 v0.4 - Multithreading with TCP client
 
 ### Last changes:
+v0.4.9 - 13.05.2026
+
+* Added test for the robot's movement while maintaining constant force.
+
 v0.4.8 - 28.04.2026
 
 * Tested version with moving average of relative QR code position (milestones).

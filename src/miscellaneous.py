@@ -6,13 +6,19 @@ import numpy as np
 import cv2
 import time 
 
-def get_objects_by_color(image_original: cv2.typing.MatLike, area_threshold: int = 5000) -> tuple[cv2.typing.MatLike, list]:
+def get_objects_by_color(image_original: cv2.typing.MatLike, 
+                        area_threshold: int = 5000,
+                        color_lower = np.array([136, 87, 111], np.uint8),
+                        color_upper = np.array([180, 255, 255], np.uint8)
+                        ) -> tuple[cv2.typing.MatLike, list]:
     """
-    Method detects objects from passed image and returns masked image and list of found objects coordinates.
+    Function detects objects from passed image and returns masked image and list of found objects coordinates.
 
     Args:
         image_original (MatLike): Original image.
         area_threshold (int): The limit size of the area that defines the found object.
+        color_lower (np.ndarray): Lower bound of the HSV color range used for masking.
+        color_upper (np.ndarray): Upper bound of the HSV color range used for masking.  
 
     Returns:
         MatLike: masked image with drawn objects.
@@ -25,9 +31,7 @@ def get_objects_by_color(image_original: cv2.typing.MatLike, area_threshold: int
     image_hsv = cv2.cvtColor(image_original, cv2.COLOR_BGR2HSV)
 
     # set range for red color and define mask
-    red_lower = np.array([136, 87, 111], np.uint8)
-    red_upper = np.array([180, 255, 255], np.uint8)
-    mask_original = cv2.inRange(image_hsv, red_lower, red_upper)
+    mask_original = cv2.inRange(image_hsv, color_lower, color_upper)
     # cv2.imshow('red_mask', mask_original) # show window for testing purposes # TODO: to remove
 
     # morphological transform, dilation for each color and bitwise_and operator

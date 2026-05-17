@@ -7,34 +7,17 @@ Its goal is to enhance the capabilities of an industrial robot by integrating ma
 **Project under development!!!**
 
 ### Current stage:
-v0.4 - Multithreading with TCP client
+v0.5 - Kalman filter
 
 ### Last changes:
+v0.5.0 - 17.05.2026
+
+* Updated the object detection function to support detecting objects of all colors.
+* Added helper function that reads the object's RGB and HSV color values from a selected pixel of the camera image.
+* Added program skeleton intended for testing the Kalman filter.
+
 v0.4.9 - 13.05.2026
 
 * Added test for the robot's movement while maintaining constant force.
 
-v0.4.8 - 28.04.2026
-
-* Tested version with moving average of relative QR code position (milestones).
-* Added version with moving average of global QR code position (also moved to milestones).
-
-v0.4.7 - 26.04.2026
-
-* Prepared resources for further tests with the robot:
-    * updated main program with improvements made in previous tests;
-    * changed method of setting movement to global coordinates instead of relative ones.
-
-v0.4.6 - 19.04.2026
-
-* Added new error reference table;
-* Cleaned up the code.
-
-v0.4.5 - 19.04.2026
-
-* Added new functions to retrieve and parse data:
-    * request_status() - reqests data from robot;
-    * get_and_handle_message_for_robot_motion():
-        * function retrieves the robot's current position...
-        * ... and data from the robot's position register.
 

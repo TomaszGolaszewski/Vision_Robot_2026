@@ -2,6 +2,10 @@ Changelog
 ======
 
 
+v0.5.1 - 17.05.2026
+------
+* Added Kalman filter to test script.
+
 v0.5.0 - 17.05.2026
 ------
 * Updated the object detection function to support detecting objects of all colors.

@@ -10,6 +10,13 @@ or (3.12 optional)
 pip3.12 install -r requirements.txt
 ```
 
+### Instalation of pyzbar
+For 64-bit Python:
+https://www.microsoft.com/en-US/download/details.aspx?id=40784
+vcredist_x64.exe
+
+pip3 install pyzbar   
+
 ## Tests
 Run tests:
 ```

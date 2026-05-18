@@ -3,6 +3,8 @@ import cv2
 import time 
 import math
 
+from pyzbar.pyzbar import decode
+
 
 def dist_two_points(point1, point2):
     """Calculate distance between two points."""
@@ -33,6 +35,70 @@ def calculate_object_position_3_dof(vertices: list[list[float]]) -> list:
 
 # ===== TESTS =================================================
 
+def test_vision_QR_pyzbar():
+
+    # initializing QR code detector
+    qr_detect = cv2.QRCodeDetector()
+
+    # initializing webcam video capture
+    webcam = cv2.VideoCapture(0)
+    if not webcam.isOpened():
+        print("Cannot open camera!")
+        exit()
+
+    # preparing for time measurement
+    i = 0
+    last_time = time.time()
+
+    # start a while loop
+    while True:
+
+        # reading the video from the webcam in image frames
+        is_frame, image_original_frame = webcam.read()
+        image_processed = image_original_frame.copy()
+
+        # detect QR codes using pyzbar
+        decoded_objects = decode(image_original_frame)
+
+        if decoded_objects:
+            for obj in decoded_objects:
+                if obj.data.decode()[:3] == "001":
+                    # print(obj.rect)
+                    # print(obj.polygon)
+                    print(obj.orientation)
+
+                pts = np.array([[p.x, p.y] for p in obj.polygon], dtype=np.int32)
+                x, y, z = calculate_object_position_3_dof(pts)
+                print(x, y, z)
+
+                # draw outlines of the codes
+                image_processed = cv2.polylines(image_original_frame, [pts], True, (0, 255, 0), 3)
+
+                # draw vertices numbers
+                for idx, p in enumerate(pts):
+                            cv2.putText(image_processed, str(idx), (p[0], p[1]),
+                                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+
+        # draw window
+        cv2.imshow("QR Detection in Real-TIme", image_processed) 
+
+           # measure time
+        if time.time() > last_time + 1:
+            last_time = time.time()
+            print("FPS:", i)
+            i = 0
+        else:
+            i += 1
+
+        # program termination
+        if cv2.waitKey(10) & 0xFF == ord('q'):
+            break
+    
+    # clean up
+    webcam.release()
+    cv2.destroyAllWindows()
+
+
 def test_vision_QR():
 
     # initializing QR code detector
@@ -49,7 +115,7 @@ def test_vision_QR():
     last_time = time.time()
 
     # start a while loop
-    while(True):
+    while True:
 
         # reading the video from the webcam in image frames
         is_frame, image_original_frame = webcam.read()
@@ -99,4 +165,5 @@ def test_vision_QR():
 
 
 if __name__ == "__main__":
-    test_vision_QR()
+    # test_vision_QR()
+    test_vision_QR_pyzbar()

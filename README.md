@@ -10,6 +10,10 @@ Its goal is to enhance the capabilities of an industrial robot by integrating ma
 v0.5 - Kalman filter
 
 ### Last changes:
+v0.5.3 - 19.05.2026
+
+* Stabilization algorithm in the main program was changed from moving average to Kalman filter.
+
 v0.5.2 - 18.05.2026
 
 * Tested new QR code detection library - pyzbar.

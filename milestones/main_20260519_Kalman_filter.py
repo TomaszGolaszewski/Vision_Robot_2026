@@ -1,6 +1,7 @@
 # Vision Robot 2026
 # By Tomasz Golaszewski
-# 12.2025 -
+# 12.2025 - 19.05.2026
+# Main program version with Kalman filter and 3 DOF (x, y, z)
 
 
 import os

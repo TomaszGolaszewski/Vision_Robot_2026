@@ -2,6 +2,10 @@ Changelog
 ======
 
 
+v0.5.3 - 19.05.2026
+------
+* Stabilization algorithm in the main program was changed from moving average to Kalman filter.
+
 v0.5.2 - 18.05.2026
 ------
 * Tested new QR code detection library - pyzbar.

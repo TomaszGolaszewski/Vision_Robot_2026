@@ -2,6 +2,10 @@ Changelog
 ======
 
 
+v0.5.4 - 20.05.2026
+------
+* QR code detection library has been changed in the main program.
+
 v0.5.3 - 19.05.2026
 ------
 * Stabilization algorithm in the main program was changed from moving average to Kalman filter.

@@ -10,6 +10,7 @@ import time
 import math
 
 from sys import path
+from pyzbar.pyzbar import decode
 
 # check the system and add files to path
 if os.name == "posix":
@@ -93,38 +94,41 @@ def run():
         # reading the video from the webcam in image frames
         is_frame, image_original_frame = webcam.read()
         image_processed = image_original_frame.copy()
-
-        # detect QR codes
-        decoded_text, vertices_coords, binarized_straight_qrcode = qr_detect.detectAndDecode(image_original_frame)
+  
+        # detect QR codes using pyzbar
+        decoded_objects = decode(image_original_frame)
 
         # Kalman filter update
         # prediction = kalman.predict()
         # pred_x, pred_y, pred_z = int(prediction[0][0]), int(prediction[1][0]), int(prediction[2][0])
 
-        if decoded_text[:3] == QR_TEXT:
-            raw_coord = calculate_object_position_3_dof(vertices_coords[0])
+        for obj in decoded_objects:
+            if obj.data.decode()[:3] == QR_TEXT:
+                # calculate the coordinates of the QR code relative to the camera
+                vertices_coords = np.array([[p.x, p.y] for p in obj.polygon], dtype=np.int32)
+                raw_coord = calculate_object_position_3_dof(vertices_coords)
 
-            # draw outlines of the codes
-            image_processed = cv2.polylines(image_original_frame, vertices_coords.astype(int), True, (0, 255, 0), 3)
+                # draw outlines of the codes
+                image_processed = cv2.polylines(image_original_frame, [vertices_coords], True, (0, 255, 0), 3)
 
-            if not TEST_VISION:
-                sequence_queue = get_and_handle_message_for_robot_motion(client, 
-                            robot_current_position, robot_current_forces, sequence_queue)
-                print("[QUEUE]", len(sequence_queue), sequence_queue)
-                print("[ROBOT POSITION]", robot_current_position)
-                # print("[FORCES]", robot_current_forces)
+                if not TEST_VISION:
+                    sequence_queue = get_and_handle_message_for_robot_motion(client, 
+                                robot_current_position, robot_current_forces, sequence_queue)
+                    print("[QUEUE]", len(sequence_queue), sequence_queue)
+                    print("[ROBOT POSITION]", robot_current_position)
+                    # print("[FORCES]", robot_current_forces)
 
-                raw_qr_global_coords = robot_current_position.copy()  
-                raw_qr_global_coords[0] = raw_qr_global_coords[0] - QR_POSITION[2] + raw_coord[2]
-                raw_qr_global_coords[1] = raw_qr_global_coords[1] + QR_POSITION[0] - raw_coord[0]
-                raw_qr_global_coords[2] = raw_qr_global_coords[2] + QR_POSITION[1] - raw_coord[1]
-            else:
-                raw_qr_global_coords = raw_coord
+                    raw_qr_global_coords = robot_current_position.copy()  
+                    raw_qr_global_coords[0] = raw_qr_global_coords[0] - QR_POSITION[2] + raw_coord[2]
+                    raw_qr_global_coords[1] = raw_qr_global_coords[1] + QR_POSITION[0] - raw_coord[0]
+                    raw_qr_global_coords[2] = raw_qr_global_coords[2] + QR_POSITION[1] - raw_coord[1]
+                else:
+                    raw_qr_global_coords = raw_coord
 
-            # Kalman measurement update
-            mx, my, mz = raw_qr_global_coords[:3]
-            measurement = np.array([[mx], [my], [mz]], np.float32)
-            kalman.correct(measurement)
+                # Kalman measurement update
+                mx, my, mz = raw_qr_global_coords[:3]
+                measurement = np.array([[mx], [my], [mz]], np.float32)
+                kalman.correct(measurement)
 
         # Kalman filter update
         prediction = kalman.predict()

@@ -11,9 +11,9 @@ QR_TEXT = '001'
 QR_POSITION = [140.0, 80.0, 440.0] # [x, y, z] mm
 MAX_ALLOWED_OFFSET = 200 # 50 # mm
 MIN_ALLOWED_OFFSET = 2 # mm
-ALLOWED_SPEED = 60 # %
 
 # Robot
+ALLOWED_SPEED = 60 # %
 REGISTER_NUMBER = 1
 SEQUENCE_MAX_LENGTH = 7
 HOME_POSITION = {
@@ -24,6 +24,9 @@ HOME_POSITION = {
 	"j5": -61.0, 
 	"j6": -13.0,
 }
+
+# Data settings
+WARM_UP_SKIP_TIME = 5
 
 # Old debug variables
 USE_FAKE_SOCKET = False # True

@@ -1,6 +1,24 @@
 import random
 import matplotlib.pyplot as plt
 
+COLOR_DICT_GREY = {
+    "background_window": "dimgrey",
+    "background_plot": "grey",
+    "line_1": "lime",
+    "line_2": "orange",
+    "line_difference": "cyan",
+    "line_plot": "white",
+}
+
+COLOR_DICT_RED = {
+    "background_window": "dimgrey",
+    "background_plot": "grey",
+    "line_1": "green",
+    "line_2": "red",
+    "line_difference": "blue",
+    "line_plot": "white",
+}
+
 def generate_demo_data(t_start=0, t_end=100, dt=0.1, start_pos=(100, 50, 400)):
     """Generates demo data: a list of robot and target positions over time.
     Each coordinate changes randomly at every step.
@@ -33,13 +51,6 @@ def generate_demo_data(t_start=0, t_end=100, dt=0.1, start_pos=(100, 50, 400)):
 
     return t, robot, target
 
-def safe_diff(a, b):
-    if a is None or b is None:
-        return None
-    if len(a) != len(b):
-        return None
-    return [x - y for x, y in zip(a, b)]
-
 def safe_plot(ax, t, values, label, color, linewidth=1):
     """Plots a line only if data is valid."""
     if values is None:
@@ -51,7 +62,8 @@ def safe_plot(ax, t, values, label, color, linewidth=1):
 
     ax.plot(t, values, label=label, color=color, linewidth=linewidth)
 
-def plot_data(t, robot, target):
+def plot_data(t, robot, target, color_dict=COLOR_DICT_RED, 
+                robot_label="robot", target_label="target", title="robot vs target"):
     """Plots robot and target trajectories along with coordinate differences.
 
     This function creates a figure consisting of six vertically stacked subplots.
@@ -77,18 +89,15 @@ def plot_data(t, robot, target):
     tz = [p[2] for p in target]
 
     # differences
-    # dx = safe_diff(rx, tx)
-    # dy = safe_diff(ry, ty)
-    # dz = safe_diff(rz, tz)
     dx = [r - c for r, c in zip(rx, tx)]
     dy = [r - c for r, c in zip(ry, ty)]
     dz = [r - c for r, c in zip(rz, tz)]
 
-    fig, axs = plt.subplots(6, 1, figsize=(10, 12), sharex=True)
+    fig, axs = plt.subplots(6, 1, figsize=(10, 10), sharex=True) # figsize=(w, h)
 
     # set grey background for all subplots
     for ax in axs:
-        ax.set_facecolor("grey")
+        ax.set_facecolor(color_dict["background_plot"])
         ax.tick_params(colors="white")
         ax.yaxis.label.set_color("white")
         ax.xaxis.label.set_color("white")
@@ -99,44 +108,45 @@ def plot_data(t, robot, target):
 
     # position plots
     # safe_plot(axs[0], t...
-    axs[0].plot(t, rx, label="robot x", color="lime", linewidth=1)
-    axs[0].plot(t, tx, label="target x", color="orange", linewidth=1)
+    axs[0].plot(t, rx, label=f"{robot_label} x", color=color_dict["line_1"], linewidth=1)
+    axs[0].plot(t, tx, label=f"{target_label} x", color=color_dict["line_2"], linewidth=1)
     axs[0].set_ylabel("X")
-    axs[0].legend(facecolor="dimgrey", labelcolor="white")
+    axs[0].legend(facecolor=color_dict["background_window"], labelcolor=color_dict["line_plot"])
 
-    axs[1].plot(t, ry, label="robot y", color="lime", linewidth=1)
-    axs[1].plot(t, ty, label="target y", color="orange", linewidth=1)
+    axs[1].plot(t, ry, label=f"{robot_label} y", color=color_dict["line_1"], linewidth=1)
+    axs[1].plot(t, ty, label=f"{target_label} y", color=color_dict["line_2"], linewidth=1)
     axs[1].set_ylabel("Y")
-    axs[1].legend(facecolor="dimgrey", labelcolor="white")
+    axs[1].legend(facecolor=color_dict["background_window"], labelcolor=color_dict["line_plot"])
 
-    axs[2].plot(t, rz, label="robot z", color="lime", linewidth=1)
-    axs[2].plot(t, tz, label="target z", color="orange", linewidth=1)
+    axs[2].plot(t, rz, label=f"{robot_label} z", color=color_dict["line_1"], linewidth=1)
+    axs[2].plot(t, tz, label=f"{target_label} z", color=color_dict["line_2"], linewidth=1)
     axs[2].set_ylabel("Z")
-    axs[2].legend(facecolor="dimgrey", labelcolor="white")
+    axs[2].legend(facecolor=color_dict["background_window"], labelcolor=color_dict["line_plot"])
 
     # differences plots
-    axs[3].plot(t, dx, label="dx", color="cyan", linewidth=1)
+    axs[3].plot(t, dx, label="dx", color=color_dict["line_difference"], linewidth=1)
     axs[3].set_ylabel("dx")
-    axs[3].legend(facecolor="dimgrey", labelcolor="white")
-    axs[3].axhline(0, color="white", linewidth=1) # horizontal line
+    axs[3].legend(facecolor=color_dict["background_window"], labelcolor=color_dict["line_plot"])
+    axs[3].axhline(0, color=color_dict["line_plot"], linewidth=1) # horizontal line
 
-    axs[4].plot(t, dy, label="dy", color="cyan", linewidth=1)
+    axs[4].plot(t, dy, label="dy", color=color_dict["line_difference"], linewidth=1)
     axs[4].set_ylabel("dy")
-    axs[4].legend(facecolor="dimgrey", labelcolor="white")
-    axs[4].axhline(0, color="white", linewidth=1) # horizontal line
+    axs[4].legend(facecolor=color_dict["background_window"], labelcolor=color_dict["line_plot"])
+    axs[4].axhline(0, color=color_dict["line_plot"], linewidth=1) # horizontal line
 
-    axs[5].plot(t, dz, label="dz", color="cyan", linewidth=1)
+    axs[5].plot(t, dz, label="dz", color=color_dict["line_difference"], linewidth=1)
     axs[5].set_ylabel("dz")
-    axs[5].legend(facecolor="dimgrey", labelcolor="white")
-    axs[5].axhline(0, color="white", linewidth=1) # horizontal line
+    axs[5].legend(facecolor=color_dict["background_window"], labelcolor=color_dict["line_plot"])
+    axs[5].axhline(0, color=color_dict["line_plot"], linewidth=1) # horizontal line
 
     axs[5].set_xlabel("time [s]")
 
-    fig.patch.set_facecolor("dimgrey")
+    fig.patch.set_facecolor(color_dict["background_window"])
+    fig.suptitle(title, color=color_dict["line_plot"], fontsize=16)
     plt.tight_layout()
     plt.show()
     
 
 if __name__ == "__main__":
     t, robot, target = generate_demo_data()
-    plot_data(t, robot, target)
+    plot_data(t, robot, target, COLOR_DICT_GREY)

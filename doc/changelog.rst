@@ -2,6 +2,11 @@ Changelog
 ======
 
 
+v0.5.6 - 21.05.2026
+------
+* Added to the main program mechanism for collecting and presenting data as graph.
+* Modified graph drawing function to use different color palettes and data labels.
+
 v0.5.5 - 21.05.2026
 ------
 * Added function to present the data collected during the experiment in graphs (matplotlib).

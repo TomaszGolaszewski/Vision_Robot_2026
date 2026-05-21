@@ -28,13 +28,15 @@ from robot_motion_interface import *
 from robot_motion_tcp_client import *
 from stabilization import handle_stabilized_points
 from vision_QR import calculate_object_position_3_dof
-
+from draw_plot import plot_data
+from draw_plot import COLOR_DICT_GREY, COLOR_DICT_RED
 
 
 def run():
 
     # variables for time measurement
     i = 0
+    start_time = time.time()
     last_time_fps = time.time()
     last_time_connection = time.time()
 
@@ -43,6 +45,13 @@ def run():
     robot_current_forces = [0, 0, 0, 0, 0, 0]
     sequence_queue = []
     sequence = 1 # ID of the motion command in RMI sequence
+
+    # history
+    history_time = []
+    history_robot_position = []
+    history_target_position = []
+    history_kalman_measurement = []
+    history_kalman_prediction = []
 
     # Kalman filter initialization
     kalman = cv2.KalmanFilter(6, 3)  # 6 dynamic params, 3 measurement params
@@ -70,9 +79,6 @@ def run():
 
     measurement = np.zeros((3, 1), np.float32)
     prediction = np.zeros((3, 1), np.float32)
-
-    # initializing QR code detector
-    qr_detect = cv2.QRCodeDetector()
 
     # initializing webcam video capture
     webcam = cv2.VideoCapture(0)
@@ -111,7 +117,7 @@ def run():
                 # draw outlines of the codes
                 image_processed = cv2.polylines(image_original_frame, [vertices_coords], True, (0, 255, 0), 3)
 
-                if not TEST_VISION:
+                if not TEST_VISION and time.time() > start_time + WARM_UP_SKIP_TIME:
                     sequence_queue = get_and_handle_message_for_robot_motion(client, 
                                 robot_current_position, robot_current_forces, sequence_queue)
                     print("[QUEUE]", len(sequence_queue), sequence_queue)
@@ -129,6 +135,15 @@ def run():
                 mx, my, mz = raw_qr_global_coords[:3]
                 measurement = np.array([[mx], [my], [mz]], np.float32)
                 kalman.correct(measurement)
+
+                # add data to history list
+                if time.time() > start_time + WARM_UP_SKIP_TIME:
+                    # history_robot_position.append(robot_current_position[:3])
+                    history_robot_position.append([mx, my, mz])
+                    history_kalman_measurement.append([mx, my, mz])
+                    history_target_position.append([pred_x, pred_y, pred_z])
+                    history_kalman_prediction.append([pred_x, pred_y, pred_z])
+                    history_time.append(time.time() - start_time)
 
         # Kalman filter update
         prediction = kalman.predict()
@@ -182,6 +197,15 @@ def run():
     webcam.release()
     cv2.destroyAllWindows()
 
+    # draw plot
+    plot_data(history_time, history_kalman_measurement, history_kalman_prediction,
+                robot_label="measurement", target_label="prediction", 
+                title="Kalman filter: measurement vs prediction",
+                color_dict=COLOR_DICT_RED)
+    plot_data(history_time, history_robot_position, history_target_position,
+                robot_label="robot", target_label="target", 
+                title="Robot position vs target position",
+                color_dict=COLOR_DICT_GREY)
 
 if __name__ == "__main__":
     run()

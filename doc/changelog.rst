@@ -2,9 +2,13 @@ Changelog
 ======
 
 
+v0.5.5 - 21.05.2026
+------
+* Added function to present the data collected during the experiment in graphs (matplotlib).
+
 v0.5.4 - 20.05.2026
 ------
-* QR code detection library has been changed in the main program.
+* QR code detection library (pyzbar) has been changed in the main program.
 
 v0.5.3 - 19.05.2026
 ------

@@ -2,7 +2,7 @@ import math
 import random
 import matplotlib.pyplot as plt
 
-COLOR_DICT_GREY = {
+COLOR_DICT_GREY_LIME_ORANGE = {
     "background_window": "dimgrey",
     "background_plot": "grey",
     "line_1": "lime",
@@ -11,7 +11,7 @@ COLOR_DICT_GREY = {
     "line_plot": "white",
 }
 
-COLOR_DICT_RED = {
+COLOR_DICT_GREY_GREEN_RED = {
     "background_window": "dimgrey",
     "background_plot": "grey",
     "line_1": "green",
@@ -63,7 +63,7 @@ def safe_plot(ax, t, values, label, color, linewidth=1):
 
     ax.plot(t, values, label=label, color=color, linewidth=linewidth)
 
-def plot_data(t, robot, target, color_dict=COLOR_DICT_RED, 
+def plot_data(t, robot, target, color_dict=COLOR_DICT_GREY_GREEN_RED, 
                 robot_label="robot", target_label="target", title="robot vs target"):
     """Plots robot and target trajectories along with coordinate differences.
 
@@ -158,4 +158,4 @@ def plot_data(t, robot, target, color_dict=COLOR_DICT_RED,
 
 if __name__ == "__main__":
     t, robot, target = generate_demo_data()
-    plot_data(t, robot, target, COLOR_DICT_GREY)
+    plot_data(t, robot, target, COLOR_DICT_GREY_LIME_ORANGE)

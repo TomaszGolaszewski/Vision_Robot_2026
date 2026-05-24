@@ -1,6 +1,10 @@
 Changelog
 ======
 
+v0.5.8 - 24.05.2026
+------
+* Added a 3D graph showing the robot's movement through space.
+* Changed the names of elements of 2D graph drawing function - file and color palettes.
 
 v0.5.7 - 24.05.2026
 ------

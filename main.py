@@ -28,8 +28,9 @@ from robot_motion_interface import *
 from robot_motion_tcp_client import *
 from stabilization import handle_stabilized_points
 from vision_QR import calculate_object_position_3_dof
-from draw_plot import plot_data
-from draw_plot import COLOR_DICT_GREY, COLOR_DICT_RED
+from draw_graph_2D import plot_data
+from draw_graph_2D import COLOR_DICT_GREY_LIME_ORANGE, COLOR_DICT_GREY_GREEN_RED
+from draw_graph_3D import plot_3d_trajectories
 
 
 def run():
@@ -198,15 +199,21 @@ def run():
     webcam.release()
     cv2.destroyAllWindows()
 
-    # draw plot
+    # draw graphs 2D
     plot_data(history_time, history_kalman_measurement, history_kalman_prediction,
                 robot_label="measurement", target_label="prediction", 
                 title="Kalman filter: measurement vs prediction",
-                color_dict=COLOR_DICT_RED)
+                color_dict=COLOR_DICT_GREY_GREEN_RED)
     plot_data(history_time, history_robot_position, history_target_position,
                 robot_label="robot", target_label="target", 
                 title="Robot position vs target position",
-                color_dict=COLOR_DICT_GREY)
+                color_dict=COLOR_DICT_GREY_LIME_ORANGE)
+
+    # draw graphs 3D
+    plot_3d_trajectories([
+        (history_kalman_measurement, "green", "Robot trajectory"),
+        (history_kalman_prediction, "orange", "Target trajectory"),
+    ])
 
 if __name__ == "__main__":
     run()

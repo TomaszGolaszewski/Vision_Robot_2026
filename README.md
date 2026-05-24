@@ -10,6 +10,11 @@ Its goal is to enhance the capabilities of an industrial robot by integrating ma
 v0.5 - Kalman filter
 
 ### Last changes:
+v0.5.7 - 24.05.2026
+
+* Changes in the structure of the main program to improve communication with the robot.
+* Added resultant error graph (7th graph).
+
 v0.5.6 - 21.05.2026
 
 * Added to the main program mechanism for collecting and presenting data as graph.

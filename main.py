@@ -38,7 +38,7 @@ def run():
     i = 0
     start_time = time.time()
     last_time_fps = time.time()
-    last_time_connection = time.time()
+    last_time_connection = time.time()# + WARM_UP_SKIP_TIME
 
     # robot variables
     robot_current_position = [0, 0, 0, 0, 0, 0]
@@ -91,6 +91,9 @@ def run():
         # go to start position
         sequence = home_robot_with_tcp_client(client, sequence, speed=ALLOWED_SPEED)
     
+    # restart time
+    start_time = time.time()
+
     # start a while loop
     while True:
 
@@ -108,69 +111,67 @@ def run():
         # prediction = kalman.predict()
         # pred_x, pred_y, pred_z = int(prediction[0][0]), int(prediction[1][0]), int(prediction[2][0])
 
+        is_valid_code_detected = False
         for obj in decoded_objects:
             if obj.data.decode()[:3] == QR_TEXT:
+                is_valid_code_detected = True
+
                 # calculate the coordinates of the QR code relative to the camera
                 vertices_coords = np.array([[p.x, p.y] for p in obj.polygon], dtype=np.int32)
                 raw_coord = calculate_object_position_3_dof(vertices_coords)
+                raw_qr_global_coords = raw_coord
 
                 # draw outlines of the codes
                 image_processed = cv2.polylines(image_original_frame, [vertices_coords], True, (0, 255, 0), 3)
 
-                if not TEST_VISION and time.time() > start_time + WARM_UP_SKIP_TIME:
-                    sequence_queue = get_and_handle_message_for_robot_motion(client, 
-                                robot_current_position, robot_current_forces, sequence_queue)
-                    print("[QUEUE]", len(sequence_queue), sequence_queue)
-                    print("[ROBOT POSITION]", robot_current_position)
-                    # print("[FORCES]", robot_current_forces)
+        # draw window
+        cv2.imshow("QR Detection in Real-Time", image_processed)
 
-                    raw_qr_global_coords = robot_current_position.copy()  
-                    raw_qr_global_coords[0] = raw_qr_global_coords[0] - QR_POSITION[2] + raw_coord[2]
-                    raw_qr_global_coords[1] = raw_qr_global_coords[1] + QR_POSITION[0] - raw_coord[0]
-                    raw_qr_global_coords[2] = raw_qr_global_coords[2] + QR_POSITION[1] - raw_coord[1]
-                else:
-                    raw_qr_global_coords = raw_coord
+        if not TEST_VISION:
+            sequence_queue = get_and_handle_message_for_robot_motion(client, 
+                        robot_current_position, robot_current_forces, sequence_queue)
+            # print("[QUEUE]", len(sequence_queue), sequence_queue)
+            # print("[ROBOT POSITION]", robot_current_position)
+            # print("[FORCES]", robot_current_forces)
 
-                # Kalman measurement update
-                mx, my, mz = raw_qr_global_coords[:3]
-                measurement = np.array([[mx], [my], [mz]], np.float32)
-                kalman.correct(measurement)
+            raw_qr_global_coords = robot_current_position.copy()  
+            raw_qr_global_coords[0] = raw_qr_global_coords[0] - QR_POSITION[2] + raw_coord[2]
+            raw_qr_global_coords[1] = raw_qr_global_coords[1] + QR_POSITION[0] - raw_coord[0]
+            raw_qr_global_coords[2] = raw_qr_global_coords[2] + QR_POSITION[1] - raw_coord[1]
 
-                # add data to history list
-                if time.time() > start_time + WARM_UP_SKIP_TIME:
-                    # history_robot_position.append(robot_current_position[:3])
-                    history_robot_position.append([mx, my, mz])
-                    history_kalman_measurement.append([mx, my, mz])
-                    history_target_position.append([pred_x, pred_y, pred_z])
-                    history_kalman_prediction.append([pred_x, pred_y, pred_z])
-                    history_time.append(time.time() - start_time)
+        if is_valid_code_detected:
+            # Kalman measurement update
+            mx, my, mz = raw_qr_global_coords[:3]
+            measurement = np.array([[mx], [my], [mz]], np.float32)
+            kalman.correct(measurement)
+
+            # add data to history list
+            if time.time() > start_time + WARM_UP_SKIP_TIME:
+                history_robot_position.append(robot_current_position[:3])
+                history_kalman_measurement.append([mx, my, mz])
+                history_target_position.append([pred_x, pred_y, pred_z])
+                history_kalman_prediction.append([pred_x, pred_y, pred_z])
+                history_time.append(time.time() - start_time)
 
         # Kalman filter update
         prediction = kalman.predict()
         pred_x, pred_y, pred_z = int(prediction[0][0]), int(prediction[1][0]), int(prediction[2][0])
-        # print(pred_x, pred_y, pred_z)
-
-        # draw window
-        cv2.imshow("QR Detection in Real-Time", image_processed)
 
         # connection
         if time.time() > last_time_connection + CONNECTION_INTERVAL:
             last_time_connection = time.time()
-            
-            # get all messages, remove complited sequences from queue
-            if not TEST_VISION:
 
-                # send new command
-                if len(sequence_queue) < SEQUENCE_MAX_LENGTH:
-                    sequence_queue.append(sequence)
-                    sequence = move_robot_cartesian_representation_with_tcp_client(client, sequence, 
-                                                    x = pred_x if pred_x else robot_current_position[0],
-                                                    y = pred_y if pred_y else robot_current_position[1],
-                                                    z = pred_z if pred_z else robot_current_position[2],
-                                                    w = robot_current_position[3],
-                                                    p = robot_current_position[4],
-                                                    r = robot_current_position[5],
-                                                    is_motion_relative=False, accuracy='CNT')
+            # send new command
+            if not TEST_VISION and len(sequence_queue) < SEQUENCE_MAX_LENGTH:
+                sequence_queue.append(sequence)
+                sequence = move_robot_cartesian_representation_with_tcp_client(client, sequence, 
+                                                x = pred_x if pred_x else robot_current_position[0],
+                                                y = pred_y if pred_y else robot_current_position[1],
+                                                z = pred_z if pred_z else robot_current_position[2],
+                                                w = robot_current_position[3],
+                                                p = robot_current_position[4],
+                                                r = robot_current_position[5],
+                                                is_motion_relative=False, accuracy='CNT')
 
                 print("[QUEUE]", len(sequence_queue), sequence_queue)
 

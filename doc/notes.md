@@ -38,3 +38,10 @@ python3.12 .\src\vision_2D.py
 ```
 python3.12 .\src\vision_QR.py
 ```
+
+## Connection
+Address: 
+192.168.11.102
+
+Mask: 
+255.255.255.0

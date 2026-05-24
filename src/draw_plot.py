@@ -1,3 +1,4 @@
+import math
 import random
 import matplotlib.pyplot as plt
 
@@ -93,7 +94,10 @@ def plot_data(t, robot, target, color_dict=COLOR_DICT_RED,
     dy = [r - c for r, c in zip(ry, ty)]
     dz = [r - c for r, c in zip(rz, tz)]
 
-    fig, axs = plt.subplots(6, 1, figsize=(10, 10), sharex=True) # figsize=(w, h)
+    # total error
+    er = [math.sqrt(rx*rx + ry*ry + rz*rz) for rx, ry, rz in zip(dx, dy, dz)]
+
+    fig, axs = plt.subplots(7, 1, figsize=(10, 10), sharex=True) # figsize=(w, h)
 
     # set grey background for all subplots
     for ax in axs:
@@ -110,17 +114,17 @@ def plot_data(t, robot, target, color_dict=COLOR_DICT_RED,
     # safe_plot(axs[0], t...
     axs[0].plot(t, rx, label=f"{robot_label} x", color=color_dict["line_1"], linewidth=1)
     axs[0].plot(t, tx, label=f"{target_label} x", color=color_dict["line_2"], linewidth=1)
-    axs[0].set_ylabel("X")
+    axs[0].set_ylabel("x")
     axs[0].legend(facecolor=color_dict["background_window"], labelcolor=color_dict["line_plot"])
 
     axs[1].plot(t, ry, label=f"{robot_label} y", color=color_dict["line_1"], linewidth=1)
     axs[1].plot(t, ty, label=f"{target_label} y", color=color_dict["line_2"], linewidth=1)
-    axs[1].set_ylabel("Y")
+    axs[1].set_ylabel("y")
     axs[1].legend(facecolor=color_dict["background_window"], labelcolor=color_dict["line_plot"])
 
     axs[2].plot(t, rz, label=f"{robot_label} z", color=color_dict["line_1"], linewidth=1)
     axs[2].plot(t, tz, label=f"{target_label} z", color=color_dict["line_2"], linewidth=1)
-    axs[2].set_ylabel("Z")
+    axs[2].set_ylabel("z")
     axs[2].legend(facecolor=color_dict["background_window"], labelcolor=color_dict["line_plot"])
 
     # differences plots
@@ -139,7 +143,12 @@ def plot_data(t, robot, target, color_dict=COLOR_DICT_RED,
     axs[5].legend(facecolor=color_dict["background_window"], labelcolor=color_dict["line_plot"])
     axs[5].axhline(0, color=color_dict["line_plot"], linewidth=1) # horizontal line
 
-    axs[5].set_xlabel("time [s]")
+    axs[6].plot(t, er, label="error", color=color_dict["line_2"], linewidth=1)
+    axs[6].set_ylabel("error")
+    axs[6].legend(facecolor=color_dict["background_window"], labelcolor=color_dict["line_plot"])
+    axs[6].axhline(0, color=color_dict["line_plot"], linewidth=1) # horizontal line
+
+    axs[6].set_xlabel("time [s]")
 
     fig.patch.set_facecolor(color_dict["background_window"])
     fig.suptitle(title, color=color_dict["line_plot"], fontsize=16)

@@ -1,6 +1,7 @@
 import math
 import random
 import matplotlib.pyplot as plt
+import numpy as np
 
 COLOR_DICT_GREY_LIME_ORANGE = {
     "background_window": "dimgrey",
@@ -45,8 +46,8 @@ def generate_demo_data(t_start=0, t_end=100, dt=0.1, start_pos=(100, 50, 400)):
         ty += random.uniform(-5, 5)
         tz += random.uniform(-5, 5)
 
-        robot.append((x, y, z))
-        target.append((tx, ty, tz))
+        robot.append(np.array((x, y, z), dtype=float))
+        target.append(np.array((tx, ty, tz), dtype=float))
 
         t_curr += dt
 

@@ -1,6 +1,15 @@
 Changelog
 ======
 
+
+v0.5.9 - 24.05.2026
+------
+* Added auxiliary elements that will be used in future tests:
+    * added functions for calculating rotation matrices;
+    * refactored vector calculations (first attempt);
+    * added the robot's last position to the 3D graph;
+    * added the coordinate recording of the robot's last requested position.
+
 v0.5.8 - 24.05.2026
 ------
 * Added a 3D graph showing the robot's movement through space.

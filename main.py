@@ -2,6 +2,9 @@
 # By Tomasz Golaszewski
 # 12.2025 -
 
+# R - macierz obrotu / rotation matrix
+# r - wektor wodzacy / global vector
+# s - wektor lokalny / local vector
 
 import os
 import cv2
@@ -24,6 +27,7 @@ else:
     print("other")
 
 from settings import *
+from functions_math import *
 from robot_motion_interface import *
 from robot_motion_tcp_client import *
 from stabilization import handle_stabilized_points
@@ -46,6 +50,7 @@ def run():
     robot_current_forces = [0, 0, 0, 0, 0, 0]
     sequence_queue = []
     sequence = 1 # ID of the motion command in RMI sequence
+    last_target_position = np.array([0, 0, 0], dtype=float)
 
     # history
     history_time = []
@@ -53,6 +58,13 @@ def run():
     history_target_position = []
     history_kalman_measurement = []
     history_kalman_prediction = []
+
+    # vectors
+    s_qr_2_camera = np.array([0, 0, 0], dtype=float) # position of the QR code relative to the camera
+    s_target_2_qr = np.array(QR_POSITION, dtype=float) # position of target point relative to the QR code 
+    r_tcp = np.array(robot_current_position[:3], dtype=float) # global position of robot tcp
+    # temporary fixed camera position relative to tcp
+    R_camera_2_tcp = rotation_matrix_x(np.pi / 2) @ rotation_matrix_y(np.pi / 2) 
 
     # Kalman filter initialization
     kalman = cv2.KalmanFilter(6, 3)  # 6 dynamic params, 3 measurement params
@@ -122,6 +134,8 @@ def run():
                 raw_coord = calculate_object_position_3_dof(vertices_coords)
                 raw_qr_global_coords = raw_coord
 
+                s_qr_2_camera = np.array(raw_coord, dtype=float)
+
                 # draw outlines of the codes
                 image_processed = cv2.polylines(image_original_frame, [vertices_coords], True, (0, 255, 0), 3)
 
@@ -135,15 +149,25 @@ def run():
             # print("[ROBOT POSITION]", robot_current_position)
             # print("[FORCES]", robot_current_forces)
 
+            r_tcp = np.array(robot_current_position[:3], dtype=float)
+
             raw_qr_global_coords = robot_current_position.copy()  
             raw_qr_global_coords[0] = raw_qr_global_coords[0] - QR_POSITION[2] + raw_coord[2]
             raw_qr_global_coords[1] = raw_qr_global_coords[1] + QR_POSITION[0] - raw_coord[0]
             raw_qr_global_coords[2] = raw_qr_global_coords[2] + QR_POSITION[1] - raw_coord[1]
 
         if is_valid_code_detected:
+            r_measurement = r_tcp + R_camera_2_tcp @ (s_target_2_qr - s_qr_2_camera)
+            # TODO: check then remove
+            print("r_vec", r_measurement)
+            print("r_old", raw_qr_global_coords[:3])
+
             # Kalman measurement update
             mx, my, mz = raw_qr_global_coords[:3]
             measurement = np.array([[mx], [my], [mz]], np.float32)
+            # TODO: check then remove
+            # print("m_vec", r_measurement.reshape(-1, 1))
+            # print("m_old", measurement)
             kalman.correct(measurement)
 
             # add data to history list
@@ -157,10 +181,16 @@ def run():
         # Kalman filter update
         prediction = kalman.predict()
         pred_x, pred_y, pred_z = int(prediction[0][0]), int(prediction[1][0]), int(prediction[2][0])
+        # TODO: check then remove
+        # print("p", prediction.reshape(-1))
 
         # connection
         if time.time() > last_time_connection + CONNECTION_INTERVAL:
             last_time_connection = time.time()
+            distance_between_targets = np.linalg.norm(last_target_position - np.array([pred_x, pred_y, pred_z], dtype=float))
+            # TODO: check then remove
+            # print(distance_between_targets)
+            last_target_position = np.array([pred_x, pred_y, pred_z], dtype=float)
 
             # send new command
             if not TEST_VISION and len(sequence_queue) < SEQUENCE_MAX_LENGTH:
@@ -213,6 +243,7 @@ def run():
     plot_3d_trajectories([
         (history_kalman_measurement, "green", "Robot trajectory"),
         (history_kalman_prediction, "orange", "Target trajectory"),
+        ([[0,0,0], robot_current_position[:3]], "black", "Robot"),
     ])
 
 if __name__ == "__main__":

@@ -1,6 +1,7 @@
 # Vision Robot 2026
 # By Tomasz Golaszewski
-# 12.2025 -
+# 12.2025 - 26.05.2026
+# Main program version with numpy vectors and 3 DOF (x, y, z)
 
 # R - macierz obrotu / rotation matrix
 # r - wektor wodzacy / global vector

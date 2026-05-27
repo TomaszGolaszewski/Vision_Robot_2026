@@ -5,10 +5,10 @@ IP_ADDRESS = '192.168.11.101'
 PORT_CONNECTION_PROCEDURE = 16001
 
 # Vision
-TEST_VISION = 1 # True == test (vision only) or False == run with robot
+TEST_VISION = True # True == test (vision only) or False == run with robot
 CONNECTION_INTERVAL = 0.3 # s
 QR_TEXT = '001'
-QR_POSITION = [140.0, 80.0, 440.0] # [x, y, z] mm
+QR_POSITION = [140.0, 80.0, -440.0] # [x, y, z] mm
 MAX_ALLOWED_OFFSET = 200 # 50 # mm
 MIN_ALLOWED_OFFSET = 2 # mm
 
@@ -28,5 +28,10 @@ HOME_POSITION = {
 # Data settings
 WARM_UP_SKIP_TIME = 5
 
+# UI variables
+SHOW_KALMAN_ERROR = True
+SHOW_ROBOT_ERROR = True
+SHOW_3D_TRAJECTORIES = False
+
 # Old debug variables
-USE_FAKE_SOCKET = False # True
+USE_FAKE_SOCKET = False

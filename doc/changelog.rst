@@ -2,6 +2,12 @@ Changelog
 ======
 
 
+v0.5.10 - 27.05.2026
+------
+* Refactored vector calculations after tests with the robot.
+* Fixed calculations for locating an object regarding right-handed coordinate system.
+* Changed data type stored in matrices - from float to np.float32.
+
 v0.5.9 - 24.05.2026
 ------
 * Added auxiliary elements that will be used in future tests:

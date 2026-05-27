@@ -31,7 +31,7 @@ def calculate_object_position_3_dof(vertices: list[list[float]]) -> list:
     x = size_real * vertices[0][0] / size_image
     y = size_real * vertices[0][1] / size_image
 
-    return [float(x), float(y), z]
+    return [float(x), float(y), -z] # -z for right-handed coordinate system
 
 # ===== TESTS =================================================
 

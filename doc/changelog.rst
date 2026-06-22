@@ -2,6 +2,12 @@ Changelog
 ======
 
 
+v0.5.11 - 22.06.2026
+------
+* Added a script that moves the robot in one axis (1D) for further diagnostics.
+* Added pid controller for further testing.
+* Presentation materials added.
+
 v0.5.10 - 27.05.2026
 ------
 * Refactored vector calculations after tests with the robot.

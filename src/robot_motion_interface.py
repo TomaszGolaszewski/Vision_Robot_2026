@@ -282,7 +282,7 @@ def prepare_command_move_robot_cartesian_representation(sequence: int, is_motion
     motion_dict["Configuration"]["Front"] = 1
     motion_dict["Configuration"]["Up"] = 1
     motion_dict["Configuration"]["Left"] = 0
-    motion_dict["Configuration"]["Flip"] = 0
+    motion_dict["Configuration"]["Flip"] = 0 # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     motion_dict["Configuration"]["Turn4"] = 0
     motion_dict["Configuration"]["Turn5"] = 0
     motion_dict["Configuration"]["Turn6"] = 0
@@ -325,10 +325,10 @@ def print_robot_position():
     sock = initialize_connection()
     time.sleep(0.5)
     rmi_send(sock, '{"Command": "FRC_ReadJointAngles"}\r\n')
-    rmi_read(sock)
+    rmi_read(sock, print_message=True)
     time.sleep(0.5)
     rmi_send(sock, '{"Command": "FRC_ReadCartesianPosition"}\r\n')
-    rmi_read(sock)
+    rmi_read(sock, print_message=True)
     time.sleep(0.5)
     close_connection(sock)
 
@@ -464,7 +464,7 @@ def test_multithreading_interface():
 # ===== MAIN =======================================================================
 
 if __name__ == "__main__":
-    # get_robot_position()
-    move_robot_to_home_position()
+    print_robot_position()
+    # move_robot_to_home_position()
     # test_robot_motion_interface()
     # test_multithreading_interface()

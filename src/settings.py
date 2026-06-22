@@ -6,7 +6,7 @@ PORT_CONNECTION_PROCEDURE = 16001
 
 # Vision
 TEST_VISION = True # True == test (vision only) or False == run with robot
-CONNECTION_INTERVAL = 0.3 # s
+CONNECTION_INTERVAL = 0.2 # s
 QR_TEXT = '001'
 QR_POSITION = [140.0, 80.0, -440.0] # [x, y, z] mm
 MAX_ALLOWED_OFFSET = 200 # 50 # mm

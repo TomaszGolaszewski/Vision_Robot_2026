@@ -1,6 +1,13 @@
 Changelog
 ======
 
+v0.6.0 - 24.06.2026
+------
+* Added test script that detects position of bright object (arm) and calculates its orientation.
+
+v0.6 - Following trajectory on moving surface
+======
+
 
 v0.5.11 - 22.06.2026
 ------

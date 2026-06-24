@@ -7,9 +7,13 @@ Its goal is to enhance the capabilities of an industrial robot by integrating ma
 **Project under development!!!**
 
 ### Current stage:
-v0.5 - Kalman filter
+v0.6 - Following trajectory on moving surface
 
 ### Last changes:
+v0.6.0 - 24.06.2026
+
+* Added test script that detects position of bright object (arm) and calculates its orientation.
+
 v0.5.11 - 22.06.2026
 
 * Added a script that moves the robot in one axis (1D) for further diagnostics.

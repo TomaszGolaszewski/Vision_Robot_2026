@@ -198,7 +198,8 @@ def move_robot_cartesian_representation_with_tcp_client(client: TcpClient, seque
 
     return sequence + 1
 
-def home_robot_with_tcp_client(client: TcpClient, sequence: int, speed: int = 100) -> int:
+def home_robot_with_tcp_client(client: TcpClient, sequence: int, 
+                                home_pos: dict[str, float] = HOME_POSITION_QR_TEST, speed: int = 100) -> int:
     """Move the robot to its HOME position."""
     send_message(client, '{"Command" : "FRC_SetOverRide", "Value" : 10 } \r\n')
     time.sleep(0.1)
@@ -206,7 +207,7 @@ def home_robot_with_tcp_client(client: TcpClient, sequence: int, speed: int = 10
     time.sleep(0.1)
 
     sequence = move_robot_joint_representation_with_tcp_client(client, sequence,
-                                        **HOME_POSITION, wait_for_response=True)
+                                        **home_pos, wait_for_response=True)
     time.sleep(1)
 
     send_message(client, '{"Command" : "FRC_SetOverRide", "Value" : ' + str(speed) + ' } \r\n')
@@ -229,7 +230,7 @@ def test_robot_motion_tcp_client():
     client = initialize_connection_with_tcp_client()
 
     # go to start position
-    sequence = home_robot_with_tcp_client(client, sequence, ALLOWED_SPEED)
+    sequence = home_robot_with_tcp_client(client, sequence, home_pos=HOME_POSITION_QR_TEST, speed=ALLOWED_SPEED)
 
     for _ in range(50):
         jump_distance = 5.0
@@ -280,7 +281,7 @@ def test_robot_forces_tcp_client():
     client = initialize_connection_with_tcp_client()
 
     # go to start position
-    sequence = home_robot_with_tcp_client(client, sequence, ALLOWED_SPEED)
+    sequence = home_robot_with_tcp_client(client, sequence, home_pos=HOME_POSITION_QR_TEST, speed=ALLOWED_SPEED)
 
     for _ in range(200):
         jump_distance = 5.0

@@ -10,6 +10,13 @@ Its goal is to enhance the capabilities of an industrial robot by integrating ma
 v0.6 - Following trajectory on moving surface
 
 ### Last changes:
+v0.6.1 - 28.07.2026
+
+* Changed the robot's HOME position.
+* Prepared functions for detecting the hand position.
+* Prepared new main program (main_ultrasound_therapy_2D) for future hand therapy.
+* Added debugging tools that will be used in future tests.
+
 v0.6.0 - 24.06.2026
 
 * Added test script that detects position of bright object (arm) and calculates its orientation.
@@ -25,12 +32,4 @@ v0.5.10 - 27.05.2026
 * Refactored vector calculations after tests with the robot.
 * Fixed calculations for locating an object regarding right-handed coordinate system.
 * Changed data type stored in matrices - from float to np.float32.
-
-v0.5.9 - 24.05.2026
-
-* Added auxiliary elements that will be used in future tests:
-    * added functions for calculating rotation matrices;
-    * refactored vector calculations (first attempt);
-    * added the robot's last position to the 3D graph;
-    * added the coordinate recording of the robot's last requested position.
 

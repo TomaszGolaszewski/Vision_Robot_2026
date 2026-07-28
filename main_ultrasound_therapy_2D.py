@@ -13,7 +13,6 @@ import time
 import math
 
 from sys import path
-from pyzbar.pyzbar import decode
 
 # check the system and add files to path
 if os.name == "posix":
@@ -30,8 +29,7 @@ from settings import *
 from functions_math import *
 from robot_motion_interface import *
 from robot_motion_tcp_client import *
-from stabilization import handle_stabilized_points
-from vision_QR import calculate_object_position_3_dof
+from vision_hand_2D import detect_bright_blob, calculate_real_position, draw_rotated_rectangle
 from draw_graph_2D import plot_data
 from draw_graph_2D import COLOR_DICT_GREY_LIME_ORANGE, COLOR_DICT_GREY_GREEN_RED
 from draw_graph_3D import plot_3d_trajectories
@@ -43,14 +41,13 @@ def run():
     i = 0
     start_time = time.time()
     last_time_fps = time.time()
-    last_time_connection = time.time()# + WARM_UP_SKIP_TIME
+    last_time_connection = time.time()
 
     # robot variables
     robot_current_position = [0, 0, 0, 0, 0, 0]
     robot_current_forces = [0, 0, 0, 0, 0, 0]
     sequence_queue = []
     sequence = 1 # ID of the motion command in RMI sequence
-    last_target_position = np.array([0, 0, 0], dtype=np.float32)
 
     # history
     history_time = []
@@ -67,36 +64,28 @@ def run():
     R_camera_2_tcp = rotation_matrix_x(np.pi / 2) @ rotation_matrix_y(np.pi / 2) 
 
     # Kalman filter initialization
-    kalman = cv2.KalmanFilter(6, 3)  # 6 dynamic params, 3 measurement params
+    kalman = cv2.KalmanFilter(4, 2)  # 6 dynamic params, 3 measurement params
 
-    # state: [x, y, z, vx, vy, vz]
+    # state: [x, alpha, vx, omega (v_alpha)]
     # F - the state-transition model
     # A - macierz systemowa ukladu (macierz przejscia)
     kalman.transitionMatrix = np.array([
-        [1, 0, 0, 1, 0, 0],
-        [0, 1, 0, 0, 1, 0],
-        [0, 0, 1, 0, 0, 1],
-        [0, 0, 0, 1, 0, 0],
-        [0, 0, 0, 0, 1, 0],
-        [0, 0, 0, 0, 0, 1]
+        [1, 0, 0, 1],
+        [0, 1, 0, 0],
+        [0, 0, 1, 0],
+        [0, 0, 0, 1]
     ], dtype=np.float32)
 
     kalman.measurementMatrix = np.array([
-        [1, 0, 0, 0, 0, 0],
-        [0, 1, 0, 0, 0, 0],
-        [0, 0, 1, 0, 0, 0]
+        [1, 0, 0, 0],
+        [0, 1, 0, 0]
     ], dtype=np.float32)
 
-    kalman.processNoiseCov = np.eye(6, dtype=np.float32) * 0.03
-    kalman.measurementNoiseCov = np.eye(3, dtype=np.float32) * 0.5
+    kalman.processNoiseCov = np.eye(4, dtype=np.float32) * 0.03
+    kalman.measurementNoiseCov = np.eye(2, dtype=np.float32) * 0.5
 
-    # measurement = np.zeros((3, 1), dtype=np.float32)
-    prediction = np.zeros((3, 1), dtype=np.float32)
-
-    # PID
-    # pid = PID3D(Kp=[1.2, 1.2, 1.2],
-    #             Ki=[0.1, 0.1, 0.1],
-    #             Kd=[0.05, 0.05, 0.05])
+    # measurement = np.zeros((2, 1), dtype=np.float32)
+    prediction = np.zeros((2, 1), dtype=np.float32)
     
     # initializing webcam video capture
     webcam = cv2.VideoCapture(0)
@@ -107,7 +96,8 @@ def run():
     if not TEST_VISION:
         client = initialize_connection_with_tcp_client()
         # go to start position
-        sequence = home_robot_with_tcp_client(client, sequence, home_pos=HOME_POSITION_QR_TEST, speed=ALLOWED_SPEED)
+        sequence = home_robot_with_tcp_client(client, sequence, 
+                                            home_pos=HOME_POSITION_HAND_TREATMENT, speed=ALLOWED_SPEED)
     
     # restart time
     start_time = time.time()
@@ -122,30 +112,12 @@ def run():
         # reading the video from the webcam in image frames
         is_frame, image_original_frame = webcam.read()
         image_processed = image_original_frame.copy()
-  
-        # detect QR codes using pyzbar
-        decoded_objects = decode(image_original_frame)
+        image_height, image_width = image_original_frame.shape[:2]
+    
+        # TODO: detect hand
 
-        is_valid_code_detected = False
-        for obj in decoded_objects:
-            if obj.data.decode()[:3] == QR_TEXT:
-                is_valid_code_detected = True
-
-                # calculate the coordinates of the QR code relative to the camera
-                vertices_coords = np.array([[p.x, p.y] for p in obj.polygon], dtype=np.int32)
-                raw_coord = calculate_object_position_3_dof(vertices_coords)
-
-                s_qr_2_camera = np.array(raw_coord, dtype=np.float32)
-
-                # draw outlines of the codes
-                image_processed = cv2.polylines(image_original_frame, [vertices_coords], True, (0, 255, 0), 3)
-
-                # save frame image
-                # cv2.imwrite(os.path.join("klatki", f"frame{frame_id:06d}.jpg"), image_processed) # image_original_frame)
-                # frame_id += 1
-
-        # draw window
-        cv2.imshow("QR Detection in Real-Time", image_processed)
+        # detect hand position as the lightest blob
+        image_processed, blob_center, blob_main_axis = detect_bright_blob(image_processed)
 
         if not TEST_VISION:
             # time.sleep(0.02)
@@ -157,53 +129,52 @@ def run():
             r_tcp = np.array(robot_current_position[:3], dtype=np.float32)
 
         # if is_valid_code_detected:
-        r_measurement = r_tcp + R_camera_2_tcp @ (s_target_2_qr - s_qr_2_camera)
-        
+        # r_measurement = r_tcp + R_camera_2_tcp @ (s_target_2_qr - s_qr_2_camera)
+        # TODO:
+        x, y, alpha = calculate_real_position(robot_current_position, blob_center, blob_main_axis)
+
+        side_panel = np.zeros((image_height, image_width, 3), dtype=np.uint8)
+        draw_rotated_rectangle(side_panel, x, y, alpha, color=(255, 0, 0))
+
+        # concatenate images and draw window
+        images_concatenated = np.concatenate((image_processed, side_panel), axis=1)
+        cv2.imshow("QR Detection in Real-Time", images_concatenated)
+
+        # TODO:
         # Kalman measurement update
-        kalman.correct(r_measurement.reshape(-1, 1).astype(np.float32))
+        # kalman.correct(r_measurement.reshape(-1, 1).astype(np.float32))
 
         # Kalman filter update
-        prediction = kalman.predict()
-        r_prediction = prediction.reshape(-1)[:3]
-        v_prediction = prediction.reshape(-1)[3:]
+        # prediction = kalman.predict()
+        # r_prediction = prediction.reshape(-1)[:3]
 
-        # add data to history list
-        if is_valid_code_detected and time.time() > start_time + WARM_UP_SKIP_TIME:
-            history_robot_position.append(robot_current_position[:3])
-            history_kalman_measurement.append(r_measurement)
-            history_target_position.append(r_prediction)
-            history_kalman_prediction.append(r_prediction)
-            history_time.append(time.time() - start_time)
+        # TODO:
+        # # add data to history list
+        # if is_valid_code_detected and time.time() > start_time + WARM_UP_SKIP_TIME:
+        #     history_robot_position.append(robot_current_position[:3])
+        #     history_kalman_measurement.append(r_measurement)
+        #     history_target_position.append(r_prediction)
+        #     history_kalman_prediction.append(r_prediction)
+        #     history_time.append(time.time() - start_time)
 
         # connection
         if time.time() > last_time_connection + CONNECTION_INTERVAL \
                 and time.time() > start_time + WARM_UP_SKIP_TIME:
             last_time_connection = time.time()
-            distance_between_targets = np.linalg.norm(last_target_position - r_prediction)
-            s_error = last_target_position - r_prediction
-            print("Distance between targets: ", distance_between_targets)
-            last_target_position = np.array(r_prediction)
 
             # send new command
-            if not TEST_VISION and len(sequence_queue) < SEQUENCE_MAX_LENGTH:# and distance_between_targets > 2:
-
-                # prediction test
-                # k=2
-                # r_prediction = r_prediction + k * v_prediction
-
-                # PID test
-                # s_control = pid.update(robot_current_position[:3], r_prediction)
-                # r_prediction = robot_current_position[:3] + s_control
+            if not TEST_VISION and len(sequence_queue) < SEQUENCE_MAX_LENGTH:
 
                 sequence_queue.append(sequence)
-                sequence = move_robot_cartesian_representation_with_tcp_client(client, sequence, 
-                                                x = r_prediction[0].item() if r_prediction[0] else robot_current_position[0],
-                                                y = r_prediction[1].item() if r_prediction[1] else robot_current_position[1],
-                                                z = r_prediction[2].item() if r_prediction[2] else robot_current_position[2],
-                                                w = robot_current_position[3],
-                                                p = robot_current_position[4],
-                                                r = robot_current_position[5],
-                                                is_motion_relative=False, accuracy='CNT')
+                # TODO:
+                # sequence = move_robot_cartesian_representation_with_tcp_client(client, sequence, 
+                #                                 x = r_prediction[0].item() if r_prediction[0] else robot_current_position[0],
+                #                                 y = r_prediction[1].item() if r_prediction[1] else robot_current_position[1],
+                #                                 z = r_prediction[2].item() if r_prediction[2] else robot_current_position[2],
+                #                                 w = robot_current_position[3],
+                #                                 p = robot_current_position[4],
+                #                                 r = robot_current_position[5],
+                #                                 is_motion_relative=False, accuracy='CNT')
 
                 print("[QUEUE]", len(sequence_queue), sequence_queue)
 

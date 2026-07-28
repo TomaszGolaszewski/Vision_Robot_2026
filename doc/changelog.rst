@@ -1,6 +1,13 @@
 Changelog
 ======
 
+v0.6.1 - 28.07.2026
+------
+* Changed the robot's HOME position.
+* Prepared functions for detecting the hand position.
+* Prepared new main program (main_ultrasound_therapy_2D) for future hand therapy.
+* Added debugging tools that will be used in future tests.
+
 v0.6.0 - 24.06.2026
 ------
 * Added test script that detects position of bright object (arm) and calculates its orientation.

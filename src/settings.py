@@ -16,7 +16,24 @@ MIN_ALLOWED_OFFSET = 2 # mm
 ALLOWED_SPEED = 60 # %
 REGISTER_NUMBER = 2
 SEQUENCE_MAX_LENGTH = 7
-HOME_POSITION = {
+# TODO: add main HOME
+# HOME_POSITION = {
+# 	"j1": -50.5, 
+# 	"j2": 25.0, 
+# 	"j3": -40.0, 
+# 	"j4": -118.0, 
+# 	"j5": -61.0, 
+# 	"j6": -13.0,
+# }
+HOME_POSITION_QR_TEST = {
+	"j1": -50.5, 
+	"j2": 25.0, 
+	"j3": -40.0, 
+	"j4": -118.0, 
+	"j5": -61.0, 
+	"j6": -13.0,
+}
+HOME_POSITION_HAND_TREATMENT = {
 	"j1": -50.5, 
 	"j2": 25.0, 
 	"j3": -40.0, 
@@ -29,8 +46,8 @@ HOME_POSITION = {
 WARM_UP_SKIP_TIME = 5
 
 # UI variables
-SHOW_KALMAN_ERROR = True
-SHOW_ROBOT_ERROR = True
+SHOW_KALMAN_ERROR = False # True
+SHOW_ROBOT_ERROR = False # True
 SHOW_3D_TRAJECTORIES = False
 
 # Old debug variables

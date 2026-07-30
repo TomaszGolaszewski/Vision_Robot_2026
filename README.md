@@ -10,6 +10,13 @@ Its goal is to enhance the capabilities of an industrial robot by integrating ma
 v0.6 - Following trajectory on moving surface
 
 ### Last changes:
+v0.6.2 - 30.07.2026
+
+* Added preview of the robot's workspace.
+* Added functions to generate the robot's trajectory:
+    * on a straight line,
+    * ​​on a sinusoidal path.
+
 v0.6.1 - 28.07.2026
 
 * Changed the robot's HOME position.

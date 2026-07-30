@@ -29,7 +29,7 @@ from settings import *
 from functions_math import *
 from robot_motion_interface import *
 from robot_motion_tcp_client import *
-from vision_hand_2D import detect_bright_blob, calculate_real_position, draw_rotated_rectangle
+from vision_hand_2D import *
 from draw_graph_2D import plot_data
 from draw_graph_2D import COLOR_DICT_GREY_LIME_ORANGE, COLOR_DICT_GREY_GREEN_RED
 from draw_graph_3D import plot_3d_trajectories
@@ -44,7 +44,19 @@ def run():
     last_time_connection = time.time()
 
     # robot variables
-    robot_current_position = [0, 0, 0, 0, 0, 0]
+    # robot_current_position = [0, 0, 0, 0, 0, 0]
+    robot_current_position = [943.208, 41.235, -25.849, -179.866, 0.01455, 120.837]
+    """
+ <--------------------------------   
+ X: 1100 - 770
+ |
+ | Y: -280
+ |
+ | Y: 165
+ |   
+ V
+    """
+    
     robot_current_forces = [0, 0, 0, 0, 0, 0]
     sequence_queue = []
     sequence = 1 # ID of the motion command in RMI sequence
@@ -57,6 +69,8 @@ def run():
     history_kalman_prediction = []
 
     # vectors
+    s_view_center_2_tcp = np.array([0, 70], dtype=np.float32) # position of view center of camera relative to the tcp
+
     s_qr_2_camera = np.array([0, 0, 0], dtype=np.float32) # position of the QR code relative to the camera
     s_target_2_qr = np.array(QR_POSITION, dtype=np.float32) # position of target point relative to the QR code 
     r_tcp = np.array(robot_current_position[:3], dtype=np.float32) # global position of robot tcp
@@ -135,6 +149,15 @@ def run():
 
         side_panel = np.zeros((image_height, image_width, 3), dtype=np.uint8)
         draw_rotated_rectangle(side_panel, x, y, alpha, color=(255, 0, 0))
+        draw_robot_position(side_panel, robot_current_position[0], robot_current_position[1], robot_current_position[3])
+
+        xt = 270
+        speed_mm_s = 20
+        # xa, xb = trajectory_motion_linear(robot_current_position[:2], 315, speed_mm_s, time.time() - start_time)
+        xa, xb = trajectory_motion_sine(robot_current_position[:2], 315, speed_mm_s, time.time() - start_time)
+        history_robot_position.append([xa, xb])
+        draw_robot_position(side_panel, xa, xb, xt, (255, 255, 255))
+        draw_trajectory(side_panel, history_robot_position)
 
         # concatenate images and draw window
         images_concatenated = np.concatenate((image_processed, side_panel), axis=1)

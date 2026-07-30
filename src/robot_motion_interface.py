@@ -282,7 +282,7 @@ def prepare_command_move_robot_cartesian_representation(sequence: int, is_motion
     motion_dict["Configuration"]["Front"] = 1
     motion_dict["Configuration"]["Up"] = 1
     motion_dict["Configuration"]["Left"] = 0
-    motion_dict["Configuration"]["Flip"] = 0 # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    motion_dict["Configuration"]["Flip"] = 1 # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     motion_dict["Configuration"]["Turn4"] = 0
     motion_dict["Configuration"]["Turn5"] = 0
     motion_dict["Configuration"]["Turn6"] = 0

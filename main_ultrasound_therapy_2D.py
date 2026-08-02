@@ -132,6 +132,10 @@ def run():
 
         # detect hand position as the lightest blob
         image_processed, blob_center, blob_main_axis = detect_bright_blob(image_processed)
+        
+        # draw ruler on the original image
+        cv2.line(image_processed, (10, 10), (10 + DPMM, 10), (200, 200, 200), 2) # 100mm
+        cv2.line(image_processed, (10, 20), (110, 20), (200, 200, 200), 2)  # 100px
 
         if not TEST_VISION:
             # time.sleep(0.02)
@@ -142,13 +146,15 @@ def run():
             # print("[FORCES]", robot_current_forces)
             r_tcp = np.array(robot_current_position[:3], dtype=np.float32)
 
-        # if is_valid_code_detected:
         # r_measurement = r_tcp + R_camera_2_tcp @ (s_target_2_qr - s_qr_2_camera)
-        # TODO:
-        x, y, alpha = calculate_real_position(robot_current_position, blob_center, blob_main_axis)
+        r_measurement = calculate_real_hand_position(robot_current_position, blob_center, blob_main_axis, image_height, image_width)
 
         side_panel = np.zeros((image_height, image_width, 3), dtype=np.uint8)
-        draw_rotated_rectangle(side_panel, x, y, alpha, color=(255, 0, 0))
+
+        # draw ruler on the side panel (1px = 1 mm)
+        cv2.line(side_panel, (10, 10), (110, 10), (200, 200, 200), 2)
+        
+        draw_rotated_rectangle(side_panel, r_measurement[0], r_measurement[1], r_measurement[3], color=(255, 0, 0))
         draw_robot_position(side_panel, robot_current_position[0], robot_current_position[1], robot_current_position[3])
 
         xt = 270

@@ -2,10 +2,7 @@ import cv2
 import numpy as np
 import math
 
-
-# class Hand2D:
-#     def __init__(self):
-#         pass
+from settings import CAMERA_CENTER_2_TCP, DPMM
 
 
 # =========== DETECTION ===================================================================
@@ -66,10 +63,43 @@ def detect_bright_blob(image_original: cv2.typing.MatLike, brightness_threshold:
     return image_original, center, main_axis
 
 
-def calculate_real_position(robot_position: list, blob_center: list, blob_eigenvector: list) -> list:
-    angle_rad = math.atan2(blob_eigenvector[1], blob_eigenvector[0])
-    angle_deg = math.degrees(angle_rad)
-    return *blob_center, angle_deg # np.pi/4
+def calculate_real_hand_position(robot_position: list, 
+                                 blob_center: list, 
+                                 blob_eigenvector: list,
+                                 img_height: int, 
+                                 img_width: int) -> list:
+    """Compute the real-world position of a detected object relative to the global 
+                    robot coordinate system.
+
+    Args:
+        robot_position (list): coordinates of the robot's TCP.
+        blob_center (list): pixel coordinates (x, y) of the detected object's center 
+            in the camera image.
+        blob_eigenvector (list): normalized 2D vector describing the
+            orientation of the detected object.
+        img_height (int): height of the camera image in pixels.
+        img_width (int): width of the camera image in pixels.
+
+    Returns:
+        list: coordinates of the object in global coordinate frame.
+    """
+    camera_offset = np.array(CAMERA_CENTER_2_TCP)  # camera position relative to the robot's TCP (mm)
+    mm_per_px = 100.0 / DPMM # DPMM = dots (pixels) per 100 millimeters on camera image
+
+    # real position (mm) of the blob relative to the center of the image
+    obj_x_on_camera = (blob_center[0] - img_width / 2) * mm_per_px
+    obj_y_on_camera = (blob_center[1] - img_height / 2) * mm_per_px
+
+    # global blob position
+    obj_x = robot_position[0] + camera_offset[0] + obj_x_on_camera
+    obj_y = robot_position[1] + camera_offset[1] + obj_y_on_camera
+    obj_z = robot_position[2]
+
+    # object orientation
+    ex, ey = blob_eigenvector
+    obj_angle = math.degrees(math.atan2(ey, ex))
+    
+    return [obj_x, obj_y, obj_z, obj_angle, robot_position[4], robot_position[5]]
 
 
 # =========== MOTION ===================================================================
@@ -110,24 +140,14 @@ def trajectory_motion_sine(start_point, angle_deg, speed_mm_s, time_s,
     - sinusoidal offset applied along the perpendicular direction.
 
     Parameters:
-        start_point (tuple[float, float]):
-            Initial (x, y) coordinates.
-
+        start_point (tuple[float, float]): initial (x, y) coordinates.
         angle_deg (float):
             Direction of the main trajectory in degrees.
             0° = +X axis, increasing counterclockwise.
-
-        speed_mm_s (float):
-            Linear speed along the main direction (mm/s).
-
-        time_s (float):
-            Time of motion (s).
-
-        amplitude_mm (float):
-            Amplitude of the sinusoidal deviation (mm).
-
-        period_s (float):
-            Length of one full sinusoidal period (s).
+        speed_mm_s (float): linear speed along the main direction (mm/s).
+        time_s (float): time of motion (s).
+        amplitude_mm (float): amplitude of the sinusoidal deviation (mm).
+        period_s (float): length of one full sinusoidal period (s).
 
     Returns:
         tuple[float, float]:
@@ -203,11 +223,9 @@ def global_2_screen(point: list) -> list:
 
     return [x, y] #, *point[2:]]
 
-def create_side_panel(panel_height, panel_width):
-    """Create black panel."""
-    panel = np.zeros((panel_height, panel_width, 3), dtype=np.uint8)
 
-def draw_rotated_rectangle(panel, x, y, alpha_deg, color=(255, 0, 0)):
+def draw_rotated_rectangle(panel, x_global, y_global, alpha_deg, color=(255, 0, 0)):
+    """Draw rectangle symbolizing the found object."""
 
     # rectangle size and orientation
     rect_width = 120
@@ -230,10 +248,11 @@ def draw_rotated_rectangle(panel, x, y, alpha_deg, color=(255, 0, 0)):
         [np.sin(alpha),  np.cos(alpha)]
     ])
 
-    # rotate and shift rectangle to the point (x, y)
+    # rotate and shift rectangle to the point in the screen coordinates
+    point_on_screen = global_2_screen([x_global, y_global])
     rotated = (R @ corners.T).T
-    rotated[:, 0] += x
-    rotated[:, 1] += y
+    rotated[:, 0] += point_on_screen[0] # x
+    rotated[:, 1] += point_on_screen[1] # y
 
     # draw the rectangle on the panel
     pts = rotated.astype(np.int32)
@@ -242,15 +261,16 @@ def draw_rotated_rectangle(panel, x, y, alpha_deg, color=(255, 0, 0)):
     return panel
 
 def draw_robot_position(image, x_global, y_global, alpha_deg, color=(0, 0, 255)):
+    """Draw circle with line symbolizing the robot and its orientation."""
     radius = 20
     length = 30
-    center = global_2_screen([x_global, y_global])
+    center_on_screen = global_2_screen([x_global, y_global])
     line_end = [
-        int(center[0] + length * math.cos(math.radians(alpha_deg))), 
-        int(center[1] + length * math.sin(math.radians(alpha_deg)))
+        int(center_on_screen[0] + length * math.cos(math.radians(alpha_deg))), 
+        int(center_on_screen[1] + length * math.sin(math.radians(alpha_deg)))
     ]
-    cv2.circle(image, center, radius, color=color, thickness=2)
-    cv2.line(image, center, line_end, color=color, thickness=2)
+    cv2.circle(image, center_on_screen, radius, color=color, thickness=2)
+    cv2.line(image, center_on_screen, line_end, color=color, thickness=2)
 
 def draw_trajectory(image, points_list, color=(255, 255, 255)):
     """Draw a trajectory on the given image by connecting consecutive points

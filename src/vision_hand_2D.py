@@ -99,7 +99,8 @@ def calculate_real_hand_position(robot_position: list,
     ex, ey = blob_eigenvector
     obj_angle = math.degrees(math.atan2(ey, ex))
     
-    return [obj_x, obj_y, obj_z, obj_angle, robot_position[4], robot_position[5]]
+    # return [obj_x, obj_y, obj_z, obj_angle, robot_position[4], robot_position[5]]
+    return [obj_x, obj_y, obj_angle]
 
 
 # =========== MOTION ===================================================================
@@ -278,7 +279,7 @@ def draw_trajectory(image, points_list, color=(255, 255, 255)):
     """
     for i, point_global in enumerate(points_list):
         if i > 0:
-            point_screen = global_2_screen(point_global)
-            previous_point_screen = global_2_screen(points_list[i - 1])
+            point_screen = global_2_screen(point_global[:2])
+            previous_point_screen = global_2_screen(points_list[i - 1][:2])
             cv2.line(image, point_screen, previous_point_screen, color, 1)
 

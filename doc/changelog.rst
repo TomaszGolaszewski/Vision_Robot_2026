@@ -5,6 +5,10 @@ Next:
 v0.7 - Following trajectory on moving surface
 ======
 
+v0.6.4 - 02.08.2026
+------
+* Added Kalman filter
+* Cleaned up code in the main program
 
 v0.6.3 - 02.08.2026
 ------

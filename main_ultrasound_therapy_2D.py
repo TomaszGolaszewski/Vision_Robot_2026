@@ -78,28 +78,31 @@ def run():
     R_camera_2_tcp = rotation_matrix_x(np.pi / 2) @ rotation_matrix_y(np.pi / 2) 
 
     # Kalman filter initialization
-    kalman = cv2.KalmanFilter(4, 2)  # 6 dynamic params, 3 measurement params
+    kalman = cv2.KalmanFilter(6, 3)  # 6 dynamic params, 3 measurement params
 
-    # state: [x, alpha, vx, omega (v_alpha)]
+    # state: [x, y, alpha, vx, vy, omega (v_alpha)]
     # F - the state-transition model
     # A - macierz systemowa ukladu (macierz przejscia)
     kalman.transitionMatrix = np.array([
-        [1, 0, 0, 1],
-        [0, 1, 0, 0],
-        [0, 0, 1, 0],
-        [0, 0, 0, 1]
+        [1, 0, 0, 1, 0, 0],
+        [0, 1, 0, 0, 1, 0],
+        [0, 0, 1, 0, 0, 1],
+        [0, 0, 0, 1, 0, 0],
+        [0, 0, 0, 0, 1, 0],
+        [0, 0, 0, 0, 0, 1]
     ], dtype=np.float32)
 
     kalman.measurementMatrix = np.array([
-        [1, 0, 0, 0],
-        [0, 1, 0, 0]
+        [1, 0, 0, 0, 0, 0],
+        [0, 1, 0, 0, 0, 0],
+        [0, 0, 1, 0, 0, 0]
     ], dtype=np.float32)
 
-    kalman.processNoiseCov = np.eye(4, dtype=np.float32) * 0.03
-    kalman.measurementNoiseCov = np.eye(2, dtype=np.float32) * 0.5
+    kalman.processNoiseCov = np.eye(6, dtype=np.float32) * 0.03
+    kalman.measurementNoiseCov = np.eye(3, dtype=np.float32) * 0.5
 
-    # measurement = np.zeros((2, 1), dtype=np.float32)
-    prediction = np.zeros((2, 1), dtype=np.float32)
+    # measurement = np.zeros((3, 1), dtype=np.float32)
+    prediction = np.zeros((3, 1), dtype=np.float32)
     
     # initializing webcam video capture
     webcam = cv2.VideoCapture(0)
@@ -147,44 +150,48 @@ def run():
             r_tcp = np.array(robot_current_position[:3], dtype=np.float32)
 
         # r_measurement = r_tcp + R_camera_2_tcp @ (s_target_2_qr - s_qr_2_camera)
-        r_measurement = calculate_real_hand_position(robot_current_position, blob_center, blob_main_axis, image_height, image_width)
+        measurement = calculate_real_hand_position(robot_current_position, blob_center, blob_main_axis, image_height, image_width)
 
-        side_panel = np.zeros((image_height, image_width, 3), dtype=np.uint8)
+        # Kalman measurement update
+        kalman.correct(np.array(measurement, np.float32))
 
-        # draw ruler on the side panel (1px = 1 mm)
-        cv2.line(side_panel, (10, 10), (110, 10), (200, 200, 200), 2)
-        
-        draw_rotated_rectangle(side_panel, r_measurement[0], r_measurement[1], r_measurement[3], color=(255, 0, 0))
-        draw_robot_position(side_panel, robot_current_position[0], robot_current_position[1], robot_current_position[3])
+        # Kalman filter update
+        prediction_raw = kalman.predict()
+        prediction = prediction_raw.reshape(-1)[:3]
 
+        # TODO:
         xt = 270
         speed_mm_s = 20
         # xa, xb = trajectory_motion_linear(robot_current_position[:2], 315, speed_mm_s, time.time() - start_time)
         xa, xb = trajectory_motion_sine(robot_current_position[:2], 315, speed_mm_s, time.time() - start_time)
-        history_robot_position.append([xa, xb])
+        history_target_position.append([xa, xb])
+
+        # TODO:
+        # add data to history list
+        if time.time() > start_time + WARM_UP_SKIP_TIME:
+            #     history_robot_position.append(robot_current_position[:3])
+            history_kalman_measurement.append(measurement)
+            #     history_target_position.append(r_prediction)
+            history_kalman_prediction.append(prediction)
+            history_time.append(time.time() - start_time)
+
+        side_panel = np.zeros((image_height, image_width, 3), dtype=np.uint8)
+        # draw ruler on the side panel (1px = 1 mm)
+        cv2.line(side_panel, (10, 10), (110, 10), (200, 200, 200), 2)
+        # draw raw coordinates of detected object
+        draw_rotated_rectangle(side_panel, measurement[0], measurement[1], measurement[2], color=(255, 0, 0))
+        # draw filtered coordinates of detected object
+        draw_rotated_rectangle(side_panel, prediction[0], prediction[1], prediction[2], color=(0, 255, 0))
+        # draw current robot position
+        draw_robot_position(side_panel, robot_current_position[0], robot_current_position[1], robot_current_position[3])
+
+        # TODO:
         draw_robot_position(side_panel, xa, xb, xt, (255, 255, 255))
-        draw_trajectory(side_panel, history_robot_position)
+        draw_trajectory(side_panel, history_target_position)
 
         # concatenate images and draw window
         images_concatenated = np.concatenate((image_processed, side_panel), axis=1)
         cv2.imshow("QR Detection in Real-Time", images_concatenated)
-
-        # TODO:
-        # Kalman measurement update
-        # kalman.correct(r_measurement.reshape(-1, 1).astype(np.float32))
-
-        # Kalman filter update
-        # prediction = kalman.predict()
-        # r_prediction = prediction.reshape(-1)[:3]
-
-        # TODO:
-        # # add data to history list
-        # if is_valid_code_detected and time.time() > start_time + WARM_UP_SKIP_TIME:
-        #     history_robot_position.append(robot_current_position[:3])
-        #     history_kalman_measurement.append(r_measurement)
-        #     history_target_position.append(r_prediction)
-        #     history_kalman_prediction.append(r_prediction)
-        #     history_time.append(time.time() - start_time)
 
         # connection
         if time.time() > last_time_connection + CONNECTION_INTERVAL \

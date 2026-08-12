@@ -46,7 +46,14 @@ def run():
     # robot variables
     # robot_current_position = [0, 0, 0, 0, 0, 0]
     robot_current_position = [943.208, 41.235, -25.849, -179.866, 0.01455, 120.837]
+
     """
+    robot[5] - obrot wokol Z - na PLUS obraca się CCW
+    120 to jest do góry (Y-)
+    -60 to jest w dół (Y+)
+    limit -20>180=-180>-1
+    180 przeskakuje na -180
+  
  <--------------------------------   
  X: 1100 - 770
  |
@@ -101,11 +108,11 @@ def run():
     kalman.processNoiseCov = np.eye(6, dtype=np.float32) * 0.03
     kalman.measurementNoiseCov = np.eye(3, dtype=np.float32) * 0.5
 
-    # measurement = np.zeros((3, 1), dtype=np.float32)
+    measurement = np.zeros((3, 1), dtype=np.float32)
     prediction = np.zeros((3, 1), dtype=np.float32)
     
     # initializing webcam video capture
-    webcam = cv2.VideoCapture(0)
+    webcam = cv2.VideoCapture(1)#0)
     if not webcam.isOpened():
         print("Cannot open camera!")
         exit()
@@ -122,6 +129,7 @@ def run():
 
     # start a while loop
     while True:
+        # robot_current_position[5] = 120 + 10*(time.time() - start_time) # TODO: to remove after tests
 
         if not TEST_VISION:
             request_status(client)
@@ -130,11 +138,10 @@ def run():
         is_frame, image_original_frame = webcam.read()
         image_processed = image_original_frame.copy()
         image_height, image_width = image_original_frame.shape[:2]
-    
-        # TODO: detect hand
 
         # detect hand position as the lightest blob
-        image_processed, blob_center, blob_main_axis = detect_bright_blob(image_processed)
+        is_contours, image_processed, blob_center, blob_main_axis = \
+                                detect_bright_blob(image_processed, brightness_threshold=BRIGHTNESS_THRESHOLD)
         
         # draw ruler on the original image
         cv2.line(image_processed, (10, 10), (10 + DPMM, 10), (200, 200, 200), 2) # 100mm
@@ -149,11 +156,13 @@ def run():
             # print("[FORCES]", robot_current_forces)
             r_tcp = np.array(robot_current_position[:3], dtype=np.float32)
 
-        # r_measurement = r_tcp + R_camera_2_tcp @ (s_target_2_qr - s_qr_2_camera)
-        measurement = calculate_real_hand_position(robot_current_position, blob_center, blob_main_axis, image_height, image_width)
+        if is_contours:
+            # r_measurement = r_tcp + R_camera_2_tcp @ (s_target_2_qr - s_qr_2_camera)
+            measurement = calculate_real_hand_position(robot_current_position, blob_center, 
+                                                                    blob_main_axis, image_height, image_width)
 
         # Kalman measurement update
-        kalman.correct(np.array(measurement, np.float32))
+        kalman.correct(np.array(measurement, np.float32).reshape(3, 1))
 
         # Kalman filter update
         prediction_raw = kalman.predict()
@@ -179,14 +188,17 @@ def run():
         # draw ruler on the side panel (1px = 1 mm)
         cv2.line(side_panel, (10, 10), (110, 10), (200, 200, 200), 2)
         # draw raw coordinates of detected object
-        draw_rotated_rectangle(side_panel, measurement[0], measurement[1], measurement[2], color=(255, 0, 0))
+        draw_rotated_rectangle(side_panel, measurement[0], measurement[1], 
+                                measurement[2] - robot_current_position[5] + TOOL_ANGLE_OFFSET, color=(255, 0, 0))
         # draw filtered coordinates of detected object
-        draw_rotated_rectangle(side_panel, prediction[0], prediction[1], prediction[2], color=(0, 255, 0))
+        draw_rotated_rectangle(side_panel, prediction[0], prediction[1], 
+                                prediction[2] - robot_current_position[5] + TOOL_ANGLE_OFFSET, color=(0, 255, 0))
         # draw current robot position
-        draw_robot_position(side_panel, robot_current_position[0], robot_current_position[1], robot_current_position[3])
+        draw_robot_position(side_panel, robot_current_position[0], robot_current_position[1], 
+                                robot_current_position[5] - TOOL_ANGLE_OFFSET)
 
         # TODO:
-        draw_robot_position(side_panel, xa, xb, xt, (255, 255, 255))
+        draw_robot_position(side_panel, xa, xb, robot_current_position[5] - TOOL_ANGLE_OFFSET, (255, 255, 255))
         draw_trajectory(side_panel, history_target_position)
 
         # concatenate images and draw window
@@ -204,12 +216,12 @@ def run():
                 sequence_queue.append(sequence)
                 # TODO:
                 # sequence = move_robot_cartesian_representation_with_tcp_client(client, sequence, 
-                #                                 x = r_prediction[0].item() if r_prediction[0] else robot_current_position[0],
-                #                                 y = r_prediction[1].item() if r_prediction[1] else robot_current_position[1],
-                #                                 z = r_prediction[2].item() if r_prediction[2] else robot_current_position[2],
+                #                                 x = prediction[0].item() if prediction[0] else robot_current_position[0],
+                #                                 y = prediction[1].item() if prediction[1] else robot_current_position[1],
+                #                                 z = robot_current_position[2],
                 #                                 w = robot_current_position[3],
                 #                                 p = robot_current_position[4],
-                #                                 r = robot_current_position[5],
+                #                                 r = prediction[2].item() if prediction[2] else robot_current_position[5],
                 #                                 is_motion_relative=False, accuracy='CNT')
 
                 print("[QUEUE]", len(sequence_queue), sequence_queue)

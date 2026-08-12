@@ -2,13 +2,15 @@ import cv2
 import numpy as np
 import math
 
-from settings import CAMERA_CENTER_2_TCP, DPMM
+from settings import *
+from functions_math import *
 
 
 # =========== DETECTION ===================================================================
 
 
-def detect_bright_blob(image_original: cv2.typing.MatLike, brightness_threshold: int = 150)-> tuple[cv2.typing.MatLike, list, list]:
+def detect_bright_blob(image_original: cv2.typing.MatLike, brightness_threshold: int = 150) \
+                                                    -> tuple[bool, cv2.typing.MatLike, list, list]:
     """
     Function detects objects from passed image and returns masked image and coordinates.
 
@@ -17,6 +19,7 @@ def detect_bright_blob(image_original: cv2.typing.MatLike, brightness_threshold:
         brightness_threshold (int): The limit size of the area that defines the found object.
 
     Returns:
+        bool: True if a valid contour was found, otherwise False.
         MatLike: masked image with drawn objects.
         list: coordinates of center of the found object.
         list: coordinates of eigenvector of the found object.
@@ -47,7 +50,7 @@ def detect_bright_blob(image_original: cv2.typing.MatLike, brightness_threshold:
                 mean, eigenvectors, eigenvalues = cv2.PCACompute2(data, mean=None)
                 # print(eigenvectors, np.linalg.norm(eigenvectors[0]))
 
-                center = tuple(mean[0].astype(int))
+                center = list(mean[0].astype(int))
                 main_axis = eigenvectors[0]  # main axis
 
                 # draw center
@@ -60,7 +63,8 @@ def detect_bright_blob(image_original: cv2.typing.MatLike, brightness_threshold:
                 # green contour
                 cv2.drawContours(image_original, [cnt], -1, (0, 255, 0), 2)
 
-    return image_original, center, main_axis
+        return True, image_original, center, main_axis
+    return False, image_original, [0, 0], [0, 0]
 
 
 def calculate_real_hand_position(robot_position: list, 
@@ -87,20 +91,20 @@ def calculate_real_hand_position(robot_position: list,
     mm_per_px = 100.0 / DPMM # DPMM = dots (pixels) per 100 millimeters on camera image
 
     # real position (mm) of the blob relative to the center of the image
-    obj_x_on_camera = (blob_center[0] - img_width / 2) * mm_per_px
+    obj_x_on_camera = -(blob_center[0] - img_width / 2) * mm_per_px
     obj_y_on_camera = (blob_center[1] - img_height / 2) * mm_per_px
+    obj_on_camera = np.array([obj_x_on_camera, obj_y_on_camera])
 
     # global blob position
-    obj_x = robot_position[0] + camera_offset[0] + obj_x_on_camera
-    obj_y = robot_position[1] + camera_offset[1] + obj_y_on_camera
-    obj_z = robot_position[2]
+    R = rotation_matrix_2d(np.deg2rad(robot_position[5] - TOOL_ANGLE_OFFSET))
+    obj_xy_global = np.array(robot_position[:2]) + R @ (camera_offset + obj_on_camera)
 
     # object orientation
     ex, ey = blob_eigenvector
     obj_angle = math.degrees(math.atan2(ey, ex))
     
-    # return [obj_x, obj_y, obj_z, obj_angle, robot_position[4], robot_position[5]]
-    return [obj_x, obj_y, obj_angle]
+    return [obj_xy_global[0], obj_xy_global[1], obj_angle]
+    # return [obj_x, obj_y, obj_angle]
 
 
 # =========== MOTION ===================================================================
@@ -243,15 +247,9 @@ def draw_rotated_rectangle(panel, x_global, y_global, alpha_deg, color=(255, 0, 
         [-dx,  dy]
     ])
 
-    # rotation matrix
-    R = np.array([
-        [np.cos(alpha), -np.sin(alpha)],
-        [np.sin(alpha),  np.cos(alpha)]
-    ])
-
     # rotate and shift rectangle to the point in the screen coordinates
     point_on_screen = global_2_screen([x_global, y_global])
-    rotated = (R @ corners.T).T
+    rotated = (rotation_matrix_2d(alpha) @ corners.T).T
     rotated[:, 0] += point_on_screen[0] # x
     rotated[:, 1] += point_on_screen[1] # y
 
@@ -265,10 +263,11 @@ def draw_robot_position(image, x_global, y_global, alpha_deg, color=(0, 0, 255))
     """Draw circle with line symbolizing the robot and its orientation."""
     radius = 20
     length = 30
+    screen_rotation_angle = 270
     center_on_screen = global_2_screen([x_global, y_global])
     line_end = [
-        int(center_on_screen[0] + length * math.cos(math.radians(alpha_deg))), 
-        int(center_on_screen[1] + length * math.sin(math.radians(alpha_deg)))
+        int(center_on_screen[0] + length * math.cos(math.radians(-alpha_deg + screen_rotation_angle))), 
+        int(center_on_screen[1] + length * math.sin(math.radians(-alpha_deg + screen_rotation_angle)))
     ]
     cv2.circle(image, center_on_screen, radius, color=color, thickness=2)
     cv2.line(image, center_on_screen, line_end, color=color, thickness=2)

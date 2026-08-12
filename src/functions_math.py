@@ -1,5 +1,11 @@
 import numpy as np
 
+def rotation_matrix_2d(theta):
+    return np.array([
+        [np.cos(theta), -np.sin(theta)],
+        [np.sin(theta), np.cos(theta)]
+    ])
+
 def rotation_matrix_x(theta):
     return np.array([
         [1, 0, 0],
@@ -10,7 +16,7 @@ def rotation_matrix_x(theta):
 def rotation_matrix_y(theta):
     return np.array([
         [ np.cos(theta), 0, np.sin(theta)],
-        [ 0,            1, 0],
+        [ 0,             1, 0            ],
         [-np.sin(theta), 0, np.cos(theta)]
     ])
 

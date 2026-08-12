@@ -5,6 +5,14 @@ Next:
 v0.7 - Following trajectory on moving surface
 ======
 
+v0.6.5 - 12.08.2026
+------
+* Updated the object detection function result to include a flag indicating whether an object was found.
+* Fixed application crash that occurred when no object was detected.
+* Added function for calculating a 2D rotation matrix.
+* Fixed the detected object angle calculation.
+* Improved movement visualization.
+
 v0.6.4 - 02.08.2026
 ------
 * Added Kalman filter

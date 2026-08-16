@@ -101,7 +101,7 @@ def calculate_real_hand_position(robot_position: list,
 
     # object orientation
     ex, ey = blob_eigenvector
-    obj_angle = math.degrees(math.atan2(ey, ex))
+    obj_angle = robot_position[5] - math.degrees(math.atan2(ey, ex)) + 90.0
     
     return [obj_xy_global[0], obj_xy_global[1], obj_angle]
     # return [obj_x, obj_y, obj_angle]
@@ -110,7 +110,8 @@ def calculate_real_hand_position(robot_position: list,
 # =========== MOTION ===================================================================
 
 
-def trajectory_motion_linear(start_point, angle_deg, speed_mm_s, time_s):
+def trajectory_motion_linear(start_point, angle_deg, speed_mm_s, time_s,
+                                maximum_path_length=300):
     """
     Compute the new point position after moving from a start point
     in given direction (angle in degrees) with constant speed, over given time.
@@ -120,15 +121,27 @@ def trajectory_motion_linear(start_point, angle_deg, speed_mm_s, time_s):
         angle_deg (float): movement direction in degrees
         speed_mm_s (float): speed in millimeters per second
         time_s (float): time of movement in seconds
+        path_length (float): distance traveled before reversing direction [mm]
 
     Returns:
         tuple[float, float]: new coordinates
     """
+    angle_rad = math.radians(angle_deg + TOOL_ANGLE_OFFSET + 30)
 
-    angle_rad = math.radians(angle_deg)
-    distance = speed_mm_s * time_s
-    x = start_point[0] + distance * math.cos(angle_rad)
-    y = start_point[1] + distance * math.sin(angle_rad)
+    # total traveled distance since the beginning of the simulation
+    distance_total = speed_mm_s * time_s
+    # full cycle length: forward and backward
+    cycle_length = 2 * maximum_path_length
+    # position within the current cycle
+    cycle_pos = distance_total % cycle_length
+    # distance from the starting point
+    if cycle_pos < maximum_path_length:
+        distance_from_start = cycle_pos
+    else:
+        distance_from_start = cycle_length - cycle_pos
+
+    x = start_point[0] + distance_from_start * math.cos(angle_rad)
+    y = start_point[1] + distance_from_start * math.sin(angle_rad)
 
     return x, y
 
@@ -235,7 +248,7 @@ def draw_rotated_rectangle(panel, x_global, y_global, alpha_deg, color=(255, 0, 
     # rectangle size and orientation
     rect_width = 120
     rect_height = 80
-    alpha = np.deg2rad(alpha_deg)
+    alpha = np.deg2rad(TOOL_ANGLE_OFFSET - alpha_deg - 90)
 
     # calculate rectangle corners
     dx = rect_width / 2
@@ -263,7 +276,7 @@ def draw_robot_position(image, x_global, y_global, alpha_deg, color=(0, 0, 255))
     """Draw circle with line symbolizing the robot and its orientation."""
     radius = 20
     length = 30
-    screen_rotation_angle = 270
+    screen_rotation_angle = TOOL_ANGLE_OFFSET - 90 # 270
     center_on_screen = global_2_screen([x_global, y_global])
     line_end = [
         int(center_on_screen[0] + length * math.cos(math.radians(-alpha_deg + screen_rotation_angle))), 

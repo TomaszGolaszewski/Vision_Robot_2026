@@ -108,11 +108,13 @@ def run():
     kalman.processNoiseCov = np.eye(6, dtype=np.float32) * 0.03
     kalman.measurementNoiseCov = np.eye(3, dtype=np.float32) * 0.5
 
-    measurement = np.zeros((3, 1), dtype=np.float32)
-    prediction = np.zeros((3, 1), dtype=np.float32)
+    # measurement = np.zeros((3, 1), dtype=np.float32)
+    measurement = np.zeros((3), dtype=np.float32)
+    # prediction = np.zeros((3, 1), dtype=np.float32)
+    prediction = np.zeros((3), dtype=np.float32)
     
     # initializing webcam video capture
-    webcam = cv2.VideoCapture(1)#0)
+    webcam = cv2.VideoCapture(CAMERA_ID)
     if not webcam.isOpened():
         print("Cannot open camera!")
         exit()
@@ -160,7 +162,6 @@ def run():
             # r_measurement = r_tcp + R_camera_2_tcp @ (s_target_2_qr - s_qr_2_camera)
             measurement = calculate_real_hand_position(robot_current_position, blob_center, 
                                                                     blob_main_axis, image_height, image_width)
-
         # Kalman measurement update
         kalman.correct(np.array(measurement, np.float32).reshape(3, 1))
 
@@ -169,10 +170,12 @@ def run():
         prediction = prediction_raw.reshape(-1)[:3]
 
         # TODO:
-        xt = 270
-        speed_mm_s = 20
-        # xa, xb = trajectory_motion_linear(robot_current_position[:2], 315, speed_mm_s, time.time() - start_time)
-        xa, xb = trajectory_motion_sine(robot_current_position[:2], 315, speed_mm_s, time.time() - start_time)
+        xa, xb = trajectory_motion_linear(robot_current_position[:2], 
+                                            prediction[2],
+                                            MOVEMENT_ALONG_ARM_SPEED, 
+                                            time.time() - start_time,
+                                            ARM_LENGTH)
+        # xa, xb = trajectory_motion_sine(robot_current_position[:2], 315, speed_mm_s, time.time() - start_time)
         history_target_position.append([xa, xb])
 
         # TODO:
@@ -188,17 +191,14 @@ def run():
         # draw ruler on the side panel (1px = 1 mm)
         cv2.line(side_panel, (10, 10), (110, 10), (200, 200, 200), 2)
         # draw raw coordinates of detected object
-        draw_rotated_rectangle(side_panel, measurement[0], measurement[1], 
-                                measurement[2] - robot_current_position[5] + TOOL_ANGLE_OFFSET, color=(255, 0, 0))
+        draw_rotated_rectangle(side_panel, measurement[0], measurement[1], measurement[2], color=(255, 0, 0))
         # draw filtered coordinates of detected object
-        draw_rotated_rectangle(side_panel, prediction[0], prediction[1], 
-                                prediction[2] - robot_current_position[5] + TOOL_ANGLE_OFFSET, color=(0, 255, 0))
+        draw_rotated_rectangle(side_panel, prediction[0], prediction[1], prediction[2], color=(0, 255, 0))
         # draw current robot position
-        draw_robot_position(side_panel, robot_current_position[0], robot_current_position[1], 
-                                robot_current_position[5] - TOOL_ANGLE_OFFSET)
+        draw_robot_position(side_panel, robot_current_position[0], robot_current_position[1], robot_current_position[5])
 
         # TODO:
-        draw_robot_position(side_panel, xa, xb, robot_current_position[5] - TOOL_ANGLE_OFFSET, (255, 255, 255))
+        draw_robot_position(side_panel, xa, xb, prediction[2], (255, 255, 255))
         draw_trajectory(side_panel, history_target_position)
 
         # concatenate images and draw window

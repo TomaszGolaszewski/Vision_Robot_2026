@@ -99,7 +99,7 @@ def run():
     #             Kd=[0.05, 0.05, 0.05])
     
     # initializing webcam video capture
-    webcam = cv2.VideoCapture(0)
+    webcam = cv2.VideoCapture(CAMERA_ID)
     if not webcam.isOpened():
         print("Cannot open camera!")
         exit()

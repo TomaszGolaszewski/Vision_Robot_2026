@@ -21,7 +21,11 @@ TOOL_ANGLE_OFFSET = 120 # deg
 BRIGHTNESS_THRESHOLD = 200
 DPMM = 200 # dots (pixels) per 100 millimeters on camera image (fixed distance to camera)
 MOVEMENT_ALONG_ARM_SPEED = 20 # mm/s
-ARM_LENGTH = 200 # mm
+SHOULDER_Y_POSITION = 150 # mm (global coordinate)
+ARM_LENGTH = 400 # mm
+ARM_WIDTH = 100 # mm
+FLUCTUATION_PERIOD = 5 # s
+MOTION_MODE = 1 # 1 = linear, 2 = sinusoidal
 
 # Robot
 ALLOWED_SPEED = 60 # %

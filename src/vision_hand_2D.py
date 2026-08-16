@@ -117,14 +117,14 @@ def trajectory_motion_linear(start_point, angle_deg, speed_mm_s, time_s,
     in given direction (angle in degrees) with constant speed, over given time.
 
     Parameters:
-        start_point (tuple[float, float]): the initial coordinates of the point
-        angle_deg (float): movement direction in degrees
-        speed_mm_s (float): speed in millimeters per second
-        time_s (float): time of movement in seconds
-        path_length (float): distance traveled before reversing direction [mm]
+        start_point (tuple[float, float]): the initial coordinates of the point;
+        angle_deg (float): movement direction in degrees;
+        speed_mm_s (float): speed in millimeters per second;
+        time_s (float): time of movement in seconds;
+        path_length (float): distance traveled before reversing direction (mm).
 
     Returns:
-        tuple[float, float]: new coordinates
+        tuple[float, float]: new coordinates.
     """
     angle_rad = math.radians(angle_deg + TOOL_ANGLE_OFFSET + 30)
 
@@ -145,10 +145,9 @@ def trajectory_motion_linear(start_point, angle_deg, speed_mm_s, time_s,
 
     return x, y
 
-import math
 
 def trajectory_motion_sine(start_point, angle_deg, speed_mm_s, time_s,
-                           amplitude_mm=50.0, period_s=5.0):
+                           amplitude_mm=50.0, maximum_path_length=300, period_s=5.0):
     """
     Compute the new 2D position of a point moving along a straight line while
     oscillating sinusoidally perpendicular to that line.
@@ -158,13 +157,12 @@ def trajectory_motion_sine(start_point, angle_deg, speed_mm_s, time_s,
     - sinusoidal offset applied along the perpendicular direction.
 
     Parameters:
-        start_point (tuple[float, float]): initial (x, y) coordinates.
-        angle_deg (float):
-            Direction of the main trajectory in degrees.
-            0° = +X axis, increasing counterclockwise.
-        speed_mm_s (float): linear speed along the main direction (mm/s).
-        time_s (float): time of motion (s).
-        amplitude_mm (float): amplitude of the sinusoidal deviation (mm).
+        start_point (tuple[float, float]): initial (x, y) coordinates;
+        angle_deg (float): movement direction in degrees;
+        speed_mm_s (float): linear speed along the main direction (mm/s);
+        time_s (float): time of motion (s);
+        amplitude_mm (float): amplitude of the sinusoidal deviation (mm);
+        path_length (float): distance traveled before reversing direction (mm);
         period_s (float): length of one full sinusoidal period (s).
 
     Returns:
@@ -173,29 +171,37 @@ def trajectory_motion_sine(start_point, angle_deg, speed_mm_s, time_s,
     """
 
     # convert angle to radians
-    angle_rad = math.radians(angle_deg)
+    angle_rad = math.radians(angle_deg + TOOL_ANGLE_OFFSET + 30)
 
-    # main direction vector
-    dir_x = math.cos(angle_rad)
-    dir_y = math.sin(angle_rad)
-
-    # perpendicular direction vector (rotated +90°)
-    perp_x = -math.sin(angle_rad)
-    perp_y = math.cos(angle_rad)
 
     # linear displacement
-    distance = speed_mm_s * time_s
-    lin_x = start_point[0] + distance * dir_x
-    lin_y = start_point[1] + distance * dir_y
+    
+    # total traveled distance since the beginning of the simulation
+    distance_total = speed_mm_s * time_s
+    # full cycle length: forward and backward
+    cycle_length = 2 * maximum_path_length
+    # position within the current cycle
+    cycle_pos = distance_total % cycle_length
+    # distance from the starting point
+    if cycle_pos < maximum_path_length:
+        distance_from_start = cycle_pos
+    else:
+        distance_from_start = cycle_length - cycle_pos
+
+    lin_x = start_point[0] + distance_from_start * math.cos(angle_rad)
+    lin_y = start_point[1] + distance_from_start * math.sin(angle_rad)
+
+
+    # sinusoidal offset
 
     # angular frequency based on period
     omega = 2 * math.pi / period_s
 
-    # sinusoidal offset
     offset = amplitude_mm * math.sin(omega * time_s)
 
-    sin_x = offset * perp_x
-    sin_y = offset * perp_y
+    sin_x = -offset * math.sin(angle_rad)
+    sin_y = offset * math.cos(angle_rad)
+
 
     # final position
     return lin_x + sin_x, lin_y + sin_y

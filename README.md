@@ -10,6 +10,13 @@ Its goal is to enhance the capabilities of an industrial robot by integrating ma
 v0.6 - Ultrasound Therapy Project (2D)
 
 ### Last changes:
+v0.6.7 - 16.08.2026
+
+* Updated algorithm that calculates sinusoidal trajectory reverses after reaching specified distance;
+* Added operating mode switch - linear / sinusoidal;
+* Added parameterization of motion along the arm;
+* Moved starting point of trajectory to shoulder position.
+
 v0.6.6 - 16.08.2026
 
 * Fixed (again) application crash that occurred when no object was detected.

@@ -37,6 +37,8 @@ from pid import *
 
 def run():
 
+    global MOTION_MODE
+
     # variables for time measurement
     i = 0
     start_time = time.time()
@@ -169,14 +171,24 @@ def run():
         prediction_raw = kalman.predict()
         prediction = prediction_raw.reshape(-1)[:3]
 
-        # TODO:
-        xa, xb = trajectory_motion_linear(robot_current_position[:2], 
-                                            prediction[2],
-                                            MOVEMENT_ALONG_ARM_SPEED, 
-                                            time.time() - start_time,
-                                            ARM_LENGTH)
-        # xa, xb = trajectory_motion_sine(robot_current_position[:2], 315, speed_mm_s, time.time() - start_time)
-        history_target_position.append([xa, xb])
+        # trajectory calculation depending on the mode of operation (1 = linear, 2 = sinusoidal)
+        if MOTION_MODE == 1:
+            position_on_trajectory = trajectory_motion_linear([robot_current_position[0], SHOULDER_Y_POSITION], 
+                                                prediction[2],
+                                                MOVEMENT_ALONG_ARM_SPEED, 
+                                                time.time() - start_time,
+                                                ARM_LENGTH)
+        elif MOTION_MODE == 2:
+            position_on_trajectory = trajectory_motion_sine([robot_current_position[0], SHOULDER_Y_POSITION], 
+                                                prediction[2],
+                                                MOVEMENT_ALONG_ARM_SPEED, 
+                                                time.time() - start_time,
+                                                ARM_WIDTH // 2,
+                                                ARM_LENGTH,
+                                                FLUCTUATION_PERIOD)
+        else:
+            position_on_trajectory = robot_current_position[:2]
+        history_target_position.append(position_on_trajectory)
 
         # TODO:
         # add data to history list
@@ -195,10 +207,13 @@ def run():
         # draw filtered coordinates of detected object
         draw_rotated_rectangle(side_panel, prediction[0], prediction[1], prediction[2], color=(0, 255, 0))
         # draw current robot position
-        draw_robot_position(side_panel, robot_current_position[0], robot_current_position[1], robot_current_position[5])
+        draw_robot_position(side_panel, 
+                    robot_current_position[0], robot_current_position[1], robot_current_position[5])
 
-        # TODO:
-        draw_robot_position(side_panel, xa, xb, prediction[2], (255, 255, 255))
+        # draw target robot position
+        draw_robot_position(side_panel, 
+                    position_on_trajectory[0], position_on_trajectory[1], prediction[2], (255, 255, 255))
+        # draw target path
         draw_trajectory(side_panel, history_target_position)
 
         # concatenate images and draw window
@@ -234,8 +249,20 @@ def run():
         else:
             i += 1
 
+        # get pressed button
+        pressed_key = cv2.waitKey(10) & 0xFF
+
+        # mode change
+        if pressed_key == ord('m'):
+            if MOTION_MODE == 1:
+                MOTION_MODE = 2
+                print(f"MOTION_MODE: sinusoidal ({MOTION_MODE})")
+            elif MOTION_MODE == 2:
+                MOTION_MODE = 1
+                print(f"MOTION_MODE: linear ({MOTION_MODE})")
+
         # program termination
-        if cv2.waitKey(10) & 0xFF == ord('q'):
+        if pressed_key == ord('q'):
             break
     
     # clean up

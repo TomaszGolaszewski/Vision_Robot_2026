@@ -102,8 +102,11 @@ def calculate_real_hand_position(robot_position: list,
     # object orientation
     ex, ey = blob_eigenvector
     obj_angle = robot_position[5] - math.degrees(math.atan2(ey, ex)) + 90.0
+
+    # limit angle fluctuations
+    obj_angle_stabilized = clamp(obj_angle, Z_ANGLE_MIN, Z_ANGLE_MAX)
     
-    return [obj_xy_global[0], obj_xy_global[1], obj_angle]
+    return [obj_xy_global[0], obj_xy_global[1], obj_angle_stabilized]
     # return [obj_x, obj_y, obj_angle]
 
 

@@ -5,9 +5,10 @@ IP_ADDRESS = '192.168.11.101'
 PORT_CONNECTION_PROCEDURE = 16001
 
 # Vision
-TEST_VISION = True # True == test (vision only) or False == run with robot
+TEST_VISION = 1# True # True == test (vision only) or False == run with robot
+SIMULATE_ROBOT_MOVEMENT = True
 CAMERA_ID = 1 # 0
-CONNECTION_INTERVAL = 0.2 # s
+CONNECTION_INTERVAL = 0.3 # 0.2 # s
 
 # QR code tracking variables
 QR_TEXT = '001'
@@ -19,7 +20,7 @@ MIN_ALLOWED_OFFSET = 2 # mm
 CAMERA_CENTER_2_TCP = [0.0, -70.0] # [x, y] mm
 TOOL_ANGLE_OFFSET = 120 # deg
 BRIGHTNESS_THRESHOLD = 200
-DPMM = 200 # dots (pixels) per 100 millimeters on camera image (fixed distance to camera)
+DPMM = 210 # dots (pixels) per 100 millimeters on camera image (fixed distance to camera)
 MOVEMENT_ALONG_ARM_SPEED = 20 # mm/s
 SHOULDER_Y_POSITION = 150 # mm (global coordinate)
 ARM_LENGTH = 400 # mm
@@ -28,9 +29,17 @@ FLUCTUATION_PERIOD = 5 # s
 MOTION_MODE = 1 # 1 = linear, 2 = sinusoidal
 
 # Robot
-ALLOWED_SPEED = 60 # %
+ALLOWED_SPEED = 40 # 60 # %
 REGISTER_NUMBER = 2
 SEQUENCE_MAX_LENGTH = 7
+
+X_MIN = 770 # mm
+X_MAX = 1100
+Y_MIN = -280
+Y_MAX = 165
+Z_ANGLE_MIN = 110 # 90 # deg
+Z_ANGLE_MAX = 130 # 150
+
 # TODO: add main HOME
 # HOME_POSITION = {
 # 	"j1": -50.5, 

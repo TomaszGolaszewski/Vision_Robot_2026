@@ -4,6 +4,7 @@
 
 import numpy as np
 import cv2
+import math
 import time 
 
 def get_objects_by_color(image_original: cv2.typing.MatLike, 
@@ -87,3 +88,22 @@ def draw_points_from_list(image: cv2.typing.MatLike,
     for p in points:
         image = cv2.circle(image, [int(p[0]), int(p[1])], radius, color, border)
     return image
+
+
+def cyclic_parameter(min_value: float, max_value: float, period: float) -> float:
+    """
+    Calculate a parameter value that cyclically changes
+    from min_value to max_value over a specified period.
+
+    Args:
+        min_value: Minimum value.
+        max_value: Maximum value.
+        period: Cycle duration in seconds.
+
+    Returns:
+        Current parameter value.
+    """
+    amplitude = (max_value - min_value) / 2
+    average_value = (max_value + min_value) / 2
+    sine_value = math.sin(2.0 * math.pi * time.time() / period)
+    return average_value + amplitude * sine_value

@@ -10,6 +10,13 @@ Its goal is to enhance the capabilities of an industrial robot by integrating ma
 v0.6 - Ultrasound Therapy Project (2D)
 
 ### Last changes:
+v0.6.8 - 17.08.2026
+
+* Added functionality to maintain the robot's position within specified safe area;
+* Added function to simulate robot position change;
+* Enabled communication with the robot;
+* Changed Kalman filter coefficients.
+
 v0.6.7 - 16.08.2026
 
 * Updated algorithm that calculates sinusoidal trajectory reverses after reaching specified distance;
@@ -31,15 +38,4 @@ v0.6.5 - 12.08.2026
 * Added function for calculating a 2D rotation matrix.
 * Fixed the detected object angle calculation.
 * Improved movement visualization.
-
-v0.6.4 - 02.08.2026
-
-* Added Kalman filter.
-* Cleaned up code in the main program.
-
-v0.6.3 - 02.08.2026
-
-* Added function that calculates the location of found object in global coordinates.
-* Added rulers to the camera preview, displaying 100 mm and 100 px.
-* Cleaned up documentation and variable names.
 

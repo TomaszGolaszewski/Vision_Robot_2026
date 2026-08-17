@@ -32,3 +32,26 @@ def rotation_matrix_yaw_pitch_roll(yaw, pitch, roll):
     Ry = rotation_matrix_y(pitch)
     Rx = rotation_matrix_x(roll)
     return Rz @ Ry @ Rx
+
+
+def clamp(value: float, minimum: float, maximum: float) -> float:
+    """
+    Restrict a value to a specified range.
+
+    Args:
+        value: The value to be constrained.
+        minimum: The lower bound of the range.
+        maximum: The upper bound of the range.
+
+    Returns:
+        The original value if it is within the range
+        [minimum, maximum]. Otherwise, returns the
+        nearest boundary value.
+
+    Raises:
+        ValueError: If minimum is greater than maximum.
+    """
+    if minimum > maximum:
+        raise ValueError("minimum cannot be greater than maximum")
+
+    return max(minimum, min(value, maximum))

@@ -6,6 +6,13 @@ v0.7 - Following trajectory on moving surface
 ======
 
 
+v0.6.8 - 17.08.2026
+------
+* Added functionality to maintain the robot's position within specified safe area;
+* Added function to simulate robot position change;
+* Enabled communication with the robot;
+* Changed Kalman filter coefficients.
+
 v0.6.7 - 16.08.2026
 ------
 * Updated algorithm that calculates sinusoidal trajectory reverses after reaching specified distance;

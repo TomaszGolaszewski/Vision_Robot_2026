@@ -210,6 +210,74 @@ def trajectory_motion_sine(start_point, angle_deg, speed_mm_s, time_s,
     return lin_x + sin_x, lin_y + sin_y
 
 
+def trajectory_motion_progressive(object_coord, robot_coord, increment, direction='forward'):
+    """
+    Calculate next position of robot following an object. 
+    The returned position is an increment away from the previous one.
+    If the direction is 'forward', the robot follows target and 
+    if direction is 'backward', it moves away.
+
+    Parameters:
+        object_coord (list[float, float]): target (x, y) coordinates [mm, mm]
+        robot_coord (list[float, float]): robot (x, y) coordinates [mm, mm]
+        increment (float): distance between robot current coordinates and new target [mm]
+        direction (str): 'forward' or 'backward'
+
+    Returns:
+        list[float, float, float]:
+            New (x, y, theta) target coordinates for robot [mm, mm, deg]
+    """
+
+    dx = object_coord[0] - robot_coord[0]
+    dy = object_coord[1] - robot_coord[1]
+
+    distance = math.hypot(dx, dy)
+
+    ux = dx / distance
+    uy = dy / distance
+
+    if direction.lower() == "forward":
+        new_x = robot_coord[0] + increment * ux
+        new_y = robot_coord[1] + increment * uy
+        theta = math.degrees(math.atan2(dy, dx))
+
+    elif direction.lower() == "backward":
+        new_x = robot_coord[0] - increment * ux
+        new_y = robot_coord[1] - increment * uy
+        theta = math.degrees(math.atan2(-dy, -dx))
+
+    else:
+        return [*robot_coord, TOOL_ANGLE_OFFSET + 90]
+
+    return [new_x, new_y, theta + TOOL_ANGLE_OFFSET + 90]
+
+
+def decide_direction(start_coord, current_coord, current_direction):
+    """
+    Reverse direction if conditions are met.
+
+    Parameters:
+        start_coord (list[float, float]): start position (x, y) coordinates [mm, mm]
+        robot_coord (list[float, float]): robot (x, y) coordinates [mm, mm]
+        direction (str): 'forward' or 'backward'
+
+    Returns:
+        str: New direction for robot: 'forward' or 'backward'
+    """
+
+    dx = start_coord[0] - current_coord[0]
+    dy = start_coord[1] - current_coord[1]
+
+    distance = math.hypot(dx, dy)
+
+    if distance > ARM_LENGTH:
+        return 'backward'
+    elif distance < 100:
+        return 'forward'
+    else:
+        return current_direction
+
+
 # =========== DRAWING ===================================================================
 
 

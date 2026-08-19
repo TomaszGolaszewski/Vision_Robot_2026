@@ -10,6 +10,7 @@ import os
 import cv2
 import numpy as np
 import time
+from datetime import datetime
 import math
 
 from sys import path
@@ -47,6 +48,9 @@ def run():
     last_time_connection = time.time()
 
     # robot variables
+    x_raw = SHOULDER_POSITION[0]
+    y_raw = SHOULDER_POSITION[1]
+    r_raw = TOOL_ANGLE_OFFSET
     # robot_current_position = [0, 0, 0, 0, 0, 0]
     robot_current_position = [943.208, 41.235, -25.849, -179.866, 0.01455, 120.837]
 
@@ -139,6 +143,7 @@ def run():
     
     # restart time
     start_time = time.time()
+    last_direction_change_time = time.time() + WARM_UP_SKIP_TIME
     # frame_id = 0
 
     # start a while loop
@@ -190,24 +195,24 @@ def run():
         prediction_raw = kalman.predict()
         prediction = prediction_raw.reshape(-1)[:3]
 
-        # trajectory calculation depending on the mode of operation (1 = linear, 2 = sinusoidal)
-        if MOTION_MODE == 1:
-            position_on_trajectory = trajectory_motion_linear([robot_current_position[0], SHOULDER_Y_POSITION], 
-                                                clamp(prediction[2].item(), Z_ANGLE_MIN, Z_ANGLE_MAX),
-                                                MOVEMENT_ALONG_ARM_SPEED, 
-                                                time.time() - start_time,
-                                                ARM_LENGTH)
-        elif MOTION_MODE == 2:
-            position_on_trajectory = trajectory_motion_sine([robot_current_position[0], SHOULDER_Y_POSITION], 
-                                                clamp(prediction[2].item(), Z_ANGLE_MIN, Z_ANGLE_MAX),
-                                                MOVEMENT_ALONG_ARM_SPEED, 
-                                                time.time() - start_time,
-                                                ARM_WIDTH // 2,
-                                                ARM_LENGTH,
-                                                FLUCTUATION_PERIOD)
-        else:
-            position_on_trajectory = robot_current_position[:2]
-        history_target_position.append(position_on_trajectory)
+        # # trajectory calculation depending on the mode of operation (1 = linear, 2 = sinusoidal)
+        # if MOTION_MODE == 1:
+        #     position_on_trajectory = trajectory_motion_linear([robot_current_position[0], SHOULDER_Y_POSITION], 
+        #                                         clamp(prediction[2].item(), Z_ANGLE_MIN, Z_ANGLE_MAX),
+        #                                         MOVEMENT_ALONG_ARM_SPEED, 
+        #                                         time.time() - start_time,
+        #                                         ARM_LENGTH)
+        # elif MOTION_MODE == 2:
+        #     position_on_trajectory = trajectory_motion_sine([robot_current_position[0], SHOULDER_Y_POSITION], 
+        #                                         clamp(prediction[2].item(), Z_ANGLE_MIN, Z_ANGLE_MAX),
+        #                                         MOVEMENT_ALONG_ARM_SPEED, 
+        #                                         time.time() - start_time,
+        #                                         ARM_WIDTH // 2,
+        #                                         ARM_LENGTH,
+        #                                         FLUCTUATION_PERIOD)
+        # else:
+        #     position_on_trajectory = robot_current_position[:2]
+        # history_target_position.append(position_on_trajectory)
 
         # TODO:
         # add data to history list
@@ -229,9 +234,63 @@ def run():
         draw_robot_position(side_panel, 
                     robot_current_position[0], robot_current_position[1], robot_current_position[5])
 
+
+        # connection
+        if time.time() > last_time_connection + CONNECTION_INTERVAL \
+                                and time.time() > start_time + WARM_UP_SKIP_TIME:
+            last_time_connection = time.time()
+
+            # trajectory calculation depending on the mode of operation (1 = linear, 2 = sinusoidal)
+            x_raw, y_raw, r_raw = trajectory_motion_progressive(
+                [prediction[0].item(), prediction[1].item()], 
+                robot_current_position[:2], 
+                MOVEMENT_ALONG_ARM_INCREMENT # MOVEMENT_ALONG_ARM_SPEED * CONNECTION_INTERVAL, 
+            )
+            history_target_position.append([x_raw, y_raw])
+
+            # send new command
+            if not TEST_VISION and len(sequence_queue) < SEQUENCE_MAX_LENGTH:
+                sequence_queue.append(sequence)
+                print("[TIME] ", datetime.now().strftime("%H:%M:%S.%f")[:-3])
+
+                # check if the robot is in safe zone
+                x_motion_command = clamp(x_raw, X_MIN, X_MAX)
+                y_motion_command = clamp(y_raw, Y_MIN, Y_MAX)
+                r_motion_command = clamp(r_raw, Z_ANGLE_MIN, Z_ANGLE_MAX) # TODO
+                print(f"{x_motion_command:.2f} {y_motion_command:.2f} {r_motion_command:.2f} {prediction[2].item():.2f}")
+
+                # TODO: fix
+                # if time.time() > last_direction_change_time + 5 and \
+                #         (dist_two_points(SHOULDER_POSITION, robot_current_position) > ARM_LENGTH or \
+                #         robot_current_position[1] > SHOULDER_POSITION[1]):
+                #     last_direction_change_time = time.time()
+                #     # change movement direction
+                #     r_motion_command = robot_current_position[5] - 180 if robot_current_position[5] > 0 else robot_current_position[5] + 180
+                #     sequence = move_robot_cartesian_representation_with_tcp_client(client, sequence, 
+                #                                 x = robot_current_position[0],
+                #                                 y = robot_current_position[1],
+                #                                 z = robot_current_position[2],
+                #                                 w = robot_current_position[3],
+                #                                 p = robot_current_position[4],
+                #                                 r = r_motion_command,
+                #                                 is_motion_relative=False, accuracy='FINE')
+                # else:    
+                sequence = move_robot_cartesian_representation_with_tcp_client(client, sequence, 
+                                                x = x_motion_command,
+                                                y = y_motion_command,
+                                                z = robot_current_position[2],
+                                                w = robot_current_position[3],
+                                                p = robot_current_position[4],
+                                                r = r_motion_command,
+                                                is_motion_relative=False, accuracy='CNT')
+
+                print("[QUEUE]", len(sequence_queue), sequence_queue)
+
+
         # draw target robot position
         draw_robot_position(side_panel, 
-                    position_on_trajectory[0], position_on_trajectory[1], prediction[2], (255, 255, 255))
+                    x_raw, y_raw, r_raw, (255, 255, 255))
+                    # position_on_trajectory[0], position_on_trajectory[1], prediction[2], (255, 255, 255))
         # draw target path
         draw_trajectory(side_panel, history_target_position)
 
@@ -239,34 +298,6 @@ def run():
         images_concatenated = np.concatenate((image_processed, side_panel), axis=1)
         cv2.imshow("QR Detection in Real-Time", images_concatenated)
 
-        # connection
-        if time.time() > last_time_connection + CONNECTION_INTERVAL \
-                                and time.time() > start_time + WARM_UP_SKIP_TIME:
-            last_time_connection = time.time()
-
-            # send new command
-            if not TEST_VISION and len(sequence_queue) < SEQUENCE_MAX_LENGTH:
-                sequence_queue.append(sequence)
-
-                # check if the robot is in safe zone
-                x_motion_command = clamp(robot_current_position[0], X_MIN, X_MAX)
-                y_motion_command = clamp(position_on_trajectory[1], Y_MIN, Y_MAX)
-                r_motion_command = clamp(prediction[2].item(), Z_ANGLE_MIN, Z_ANGLE_MAX)
-                print(f"{x_motion_command:.2f} {y_motion_command:.2f} {r_motion_command:.2f} {prediction[2].item():.2f}")
-                
-                sequence = move_robot_cartesian_representation_with_tcp_client(client, sequence, 
-                                                # x = prediction[0].item() if prediction[0] else robot_current_position[0],
-                                                x = x_motion_command,
-                                                # y = prediction[1].item() if prediction[1] else robot_current_position[1],
-                                                y = y_motion_command,
-                                                z = robot_current_position[2],
-                                                w = robot_current_position[3],
-                                                p = robot_current_position[4],
-                                                # r = prediction[2].item() if prediction[2] else robot_current_position[5],
-                                                r = r_motion_command,
-                                                is_motion_relative=False, accuracy='CNT')
-
-                print("[QUEUE]", len(sequence_queue), sequence_queue)
 
         # measure time
         if time.time() > last_time_fps + 1:

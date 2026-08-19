@@ -1,3 +1,4 @@
+import math
 import numpy as np
 
 def rotation_matrix_2d(theta):
@@ -55,3 +56,9 @@ def clamp(value: float, minimum: float, maximum: float) -> float:
         raise ValueError("minimum cannot be greater than maximum")
 
     return max(minimum, min(value, maximum))
+
+
+def dist_two_points(point1, point2):
+    """Calculate distance between two points."""
+    # return math.sqrt((point1[0]-point2[0])**2 + (point1[1]-point2[1])**2)
+    return math.hypot(point1[0]-point2[0], point1[1]-point2[1])

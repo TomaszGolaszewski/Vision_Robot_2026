@@ -10,6 +10,10 @@ Its goal is to enhance the capabilities of an industrial robot by integrating ma
 v0.6 - Ultrasound Therapy Project (2D)
 
 ### Last changes:
+v0.6.9 - 19.08.2026
+
+* Changed the method of calculating the trajectory - now the robot follows the target.
+
 v0.6.8 - 17.08.2026
 
 * Added functionality to maintain the robot's position within specified safe area;

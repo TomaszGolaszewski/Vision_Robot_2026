@@ -5,6 +5,9 @@ Next:
 v0.7 - Following trajectory on moving surface
 ======
 
+v0.6.9 - 19.08.2026
+------
+* Changed the method of calculating the trajectory - now the robot follows the target.
 
 v0.6.8 - 17.08.2026
 ------

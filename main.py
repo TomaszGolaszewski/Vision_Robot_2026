@@ -48,6 +48,7 @@ def run():
     # robot variables
     robot_current_position = [0, 0, 0, 0, 0, 0]
     robot_current_forces = [0, 0, 0, 0, 0, 0]
+    robot_current_configuration = {}
     sequence_queue = []
     sequence = 1 # ID of the motion command in RMI sequence
     last_target_position = np.array([0, 0, 0], dtype=np.float32)
@@ -150,7 +151,7 @@ def run():
         if not TEST_VISION:
             # time.sleep(0.02)
             sequence_queue = get_and_handle_message_for_robot_motion(client, 
-                        robot_current_position, robot_current_forces, sequence_queue)
+                        robot_current_position, robot_current_forces, robot_current_configuration, sequence_queue)
             # print("[QUEUE]", len(sequence_queue), sequence_queue)
             # print("[ROBOT POSITION]", robot_current_position)
             # print("[FORCES]", robot_current_forces)
@@ -196,7 +197,7 @@ def run():
                 # r_prediction = robot_current_position[:3] + s_control
 
                 sequence_queue.append(sequence)
-                sequence = move_robot_cartesian_representation_with_tcp_client(client, sequence, 
+                sequence = move_robot_cartesian_representation_with_tcp_client(client, sequence, robot_current_configuration,
                                                 x = r_prediction[0].item() if r_prediction[0] else robot_current_position[0],
                                                 y = r_prediction[1].item() if r_prediction[1] else robot_current_position[1],
                                                 z = r_prediction[2].item() if r_prediction[2] else robot_current_position[2],
@@ -223,7 +224,7 @@ def run():
     if not TEST_VISION:
         time.sleep(1)
         sequence_queue = get_and_handle_message_for_robot_motion(client, 
-                    robot_current_position, robot_current_forces, sequence_queue)
+                    robot_current_position, robot_current_forces, robot_current_configuration, sequence_queue)
         print("[QUEUE]", len(sequence_queue), sequence_queue)
 
         close_connection_with_tcp_client(client)

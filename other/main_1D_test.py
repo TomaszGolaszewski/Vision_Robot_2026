@@ -24,30 +24,13 @@ from settings import *
 from functions_math import *
 from robot_motion_interface import *
 from robot_motion_tcp_client import *
-from stabilization import handle_stabilized_points
-from vision_QR import dist_two_points # calculate_object_position_3_dof
-from draw_graph_2D import plot_data
-from draw_graph_2D import COLOR_DICT_GREY_LIME_ORANGE, COLOR_DICT_GREY_GREEN_RED
-from draw_graph_3D import plot_3d_trajectories
-
-
+from vision_QR import dist_two_points
 
 # -----------------------------------------------------------------
-
-TEST_VISION = 0#True
 
 CAMERA_ZERO = 80 # mm
 ALLOWED_SPEED = 90 # %
 CONNECTION_INTERVAL = 0.5 # s
-
-TEST_POSITION = {
-	"j1": -6.7, 
-	"j2": 40.7, 
-	"j3": -33.6, 
-	"j4": -179.9, 
-	"j5": 56.5, 
-	"j6": -52.5,
-}
 
 # FRC_CARTESIAN_REPRESENTATION_TEMPLATE_DICT = {
 #     "Instruction": "FRC_JointRelative",
@@ -112,6 +95,7 @@ def run():
     # robot variables
     robot_current_position = [0, 0, 0, 0, 0, 0]
     robot_current_forces = [0, 0, 0, 0, 0, 0]
+    robot_current_configuration = {}
     raw_y = 0
     size_image = 10
     sequence_queue = []
@@ -160,7 +144,7 @@ def run():
     prediction = np.zeros((1, 1), dtype=np.float32)
 
         # initializing webcam video capture
-    webcam = cv2.VideoCapture(0)
+    webcam = cv2.VideoCapture(CAMERA_ID)
     if not webcam.isOpened():
         print("Cannot open camera!")
         exit()
@@ -173,8 +157,9 @@ def run():
         get_message(client)
         time.sleep(0.1)
 
-        sequence = move_robot_joint_representation_with_tcp_client(client, sequence,
-                                            **TEST_POSITION, wait_for_response=True)
+        # go to start position
+        sequence = home_robot_with_tcp_client(client, sequence, 
+                                            home_pos=HOME_POSITION_1D_TEST, speed=ALLOWED_SPEED)
         time.sleep(1)
 
         send_message(client, '{"Command" : "FRC_SetOverRide", "Value" : ' + str(ALLOWED_SPEED) + ' } \r\n')
@@ -218,7 +203,7 @@ def run():
         if not TEST_VISION:
             # time.sleep(0.02)
             sequence_queue = get_and_handle_message_for_robot_motion(client, 
-                        robot_current_position, robot_current_forces, sequence_queue)
+                        robot_current_position, robot_current_forces, robot_current_configuration, sequence_queue)
             
         r_measurement_y = robot_current_position[1] + raw_y - CAMERA_ZERO
         # Kalman measurement update
@@ -264,7 +249,7 @@ def run():
                 # target = float(new_target)
                 
                 sequence_queue.append(sequence)
-                sequence = move_robot_cartesian_representation_with_tcp_client(client, sequence, 
+                sequence = move_robot_cartesian_representation_with_tcp_client(client, sequence, robot_current_configuration, 
                                                 x = robot_current_position[0],
                                                 y = target if target else robot_current_position[1],
                                                 z = robot_current_position[2],
@@ -294,7 +279,7 @@ def run():
     if not TEST_VISION:
         time.sleep(1)
         sequence_queue = get_and_handle_message_for_robot_motion(client, 
-                    robot_current_position, robot_current_forces, sequence_queue)
+                    robot_current_position, robot_current_forces, robot_current_configuration, sequence_queue)
         print("[QUEUE]", len(sequence_queue), sequence_queue)
 
         close_connection_with_tcp_client(client)

@@ -5,6 +5,10 @@ Next:
 v0.7 - Following trajectory on moving surface
 ======
 
+v0.6.10 - 23.09.2026
+------
+* Added robot configuration copying to fix the reorientation issue.
+
 v0.6.9 - 19.08.2026
 ------
 * Changed the method of calculating the trajectory - now the robot follows the target.

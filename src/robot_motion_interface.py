@@ -265,6 +265,7 @@ def move_robot_joint_representation_with_socket(sock: socket.socket, sequence: i
     return sequence + 1
 
 def prepare_command_move_robot_cartesian_representation(sequence: int, is_motion_relative: bool = False, 
+                        robot_configuration: dict = None,
                         x: float = 0.0, y: float = 0.0, z: float = 0.0, 
                         w: float = 0.0, p: float = 0.0, r: float = 0.0, 
                         speed: int = 100, accuracy: str = 'FINE') -> str:
@@ -279,13 +280,16 @@ def prepare_command_move_robot_cartesian_representation(sequence: int, is_motion
     motion_dict["Position"]["W"] = w
     motion_dict["Position"]["P"] = p
     motion_dict["Position"]["R"] = r
-    motion_dict["Configuration"]["Front"] = 1
-    motion_dict["Configuration"]["Up"] = 1
-    motion_dict["Configuration"]["Left"] = 0
-    motion_dict["Configuration"]["Flip"] = 1 # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-    motion_dict["Configuration"]["Turn4"] = 0
-    motion_dict["Configuration"]["Turn5"] = 0
-    motion_dict["Configuration"]["Turn6"] = 0
+    if robot_configuration is None:
+        motion_dict["Configuration"]["Front"] = 1
+        motion_dict["Configuration"]["Up"] = 1
+        motion_dict["Configuration"]["Left"] = 0
+        motion_dict["Configuration"]["Flip"] = 0 # <<<
+        motion_dict["Configuration"]["Turn4"] = 0
+        motion_dict["Configuration"]["Turn5"] = 0
+        motion_dict["Configuration"]["Turn6"] = 0
+    else:
+        motion_dict["Configuration"] = copy.deepcopy(robot_configuration)
     motion_dict["Speed"] = speed
     motion_dict["TermType"] = "CNT" if accuracy == "CNT" else "FINE" # FINE or CNT
     motion_dict["TermValue"] = 100 if accuracy == "CNT" else 0 # 1-100

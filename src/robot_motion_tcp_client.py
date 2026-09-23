@@ -69,7 +69,8 @@ def get_message(client: TcpClient, print_message: bool = False) -> list:
     return error_list
 
 def get_and_handle_message_for_robot_motion(client: TcpClient, 
-                    robot_position: list, robot_forces: list, sequence_queue: list,
+                    robot_position: list, robot_forces: list, robot_configuration: dict, 
+                    sequence_queue: list,
                     print_message: bool = False) -> list:
     """Receive and decode a JSON message from an RMI TCP client.
     Return: list of sequence ids waiting in the queue.
@@ -102,6 +103,8 @@ def get_and_handle_message_for_robot_motion(client: TcpClient,
                 position = message.get("Position", None)
                 if command == "FRC_ReadCartesianPosition" and position:
                     parse_coordinates(position, robot_position)
+                    robot_configuration.clear()
+                    robot_configuration.update(message.get("Configuration", {}))
                 if command == "FRC_ReadPositionRegister" and position:
                     parse_coordinates(position, robot_forces)
     
@@ -182,13 +185,15 @@ def move_robot_joint_representation_with_tcp_client(client: TcpClient, sequence:
 
     return sequence + 1
 
-def move_robot_cartesian_representation_with_tcp_client(client: TcpClient, sequence: int, is_motion_relative: bool = False, 
+def move_robot_cartesian_representation_with_tcp_client(client: TcpClient, sequence: int, robot_configuration: dict,
+                        is_motion_relative: bool = False,                      
                         x: float = 0.0, y: float = 0.0, z: float = 0.0, 
                         w: float = 0.0, p: float = 0.0, r: float = 0.0, 
                         speed: int = 100, accuracy: str = 'FINE', wait_for_response: bool = False) -> int:
 
     motion_json = prepare_command_move_robot_cartesian_representation(
                         sequence=sequence, is_motion_relative=is_motion_relative,
+                        robot_configuration=robot_configuration,
                         x=x, y=y, z=z, w=w, p=p, r=r, speed=speed, accuracy=accuracy)
 
     send_message(client, motion_json)
@@ -224,6 +229,7 @@ def test_robot_motion_tcp_client():
 
     robot_current_position = [0, 0, 0, 0, 0, 0]
     robot_current_forces = [0, 0, 0, 0, 0, 0]
+    robot_current_configuration = {}
     sequence_queue = []
     sequence = 1 # ID of the motion command in RMI sequence
 
@@ -241,31 +247,31 @@ def test_robot_motion_tcp_client():
         request_status(client)
         time.sleep(0.02) # time needed to receive response
         sequence_queue = get_and_handle_message_for_robot_motion(client, 
-                    robot_current_position, robot_current_forces, sequence_queue)
+                    robot_current_position, robot_current_forces, robot_current_configuration, sequence_queue)
             
         sequence_queue.append(sequence)
         print("[QUEUE]", len(sequence_queue), sequence_queue)
         print("[POSITION]", robot_current_position)
         # print("[FORCES]", robot_current_forces)
         if r == 1:
-            sequence = move_robot_cartesian_representation_with_tcp_client(client, sequence, 
+            sequence = move_robot_cartesian_representation_with_tcp_client(client, sequence, robot_current_configuration,
                         is_motion_relative=True, x=sign*jump_distance, accuracy='CNT')
         elif r == 2:
-            sequence = move_robot_cartesian_representation_with_tcp_client(client, sequence, 
+            sequence = move_robot_cartesian_representation_with_tcp_client(client, sequence, robot_current_configuration,
                         is_motion_relative=True, y=sign*jump_distance, accuracy='CNT')
         else:
-            sequence = move_robot_cartesian_representation_with_tcp_client(client, sequence, 
+            sequence = move_robot_cartesian_representation_with_tcp_client(client, sequence, robot_current_configuration,
                         is_motion_relative=True, z=sign*jump_distance, accuracy='CNT')
         time.sleep(0.1)
 
     sequence_queue.append(sequence)
     print("[QUEUE]", len(sequence_queue), sequence_queue)
-    sequence = move_robot_cartesian_representation_with_tcp_client(client, sequence,
+    sequence = move_robot_cartesian_representation_with_tcp_client(client, sequence, robot_current_configuration,
                         is_motion_relative=True, z=50.0)
     time.sleep(2)
 
     sequence_queue = get_and_handle_message_for_robot_motion(client, 
-                    robot_current_position, robot_current_forces, sequence_queue)
+                    robot_current_position, robot_current_forces, robot_current_configuration, sequence_queue)
     print("[QUEUE]", len(sequence_queue), sequence_queue)
 
     close_connection_with_tcp_client(client)
@@ -275,6 +281,7 @@ def test_robot_forces_tcp_client():
 
     robot_current_position = [0, 0, 0, 0, 0, 0]
     robot_current_forces = [0, 0, 0, 0, 0, 0]
+    robot_current_configuration = {}
     sequence_queue = []
     sequence = 1 # ID of the motion command in RMI sequence
 
@@ -292,7 +299,7 @@ def test_robot_forces_tcp_client():
         request_status(client)
         time.sleep(0.02) # time needed to receive response
         sequence_queue = get_and_handle_message_for_robot_motion(client, 
-                        robot_current_position, robot_current_forces, sequence_queue)
+                        robot_current_position, robot_current_forces, robot_current_configuration, sequence_queue)
         sequence_queue.append(sequence)
 
         # print("[QUEUE]", len(sequence_queue), sequence_queue)
@@ -301,7 +308,7 @@ def test_robot_forces_tcp_client():
         force_x = robot_current_forces[0]
         print((force_threshold + force_x) / k)
 
-        sequence = move_robot_cartesian_representation_with_tcp_client(client, sequence, 
+        sequence = move_robot_cartesian_representation_with_tcp_client(client, sequence, robot_current_configuration,
                         is_motion_relative=True, 
                         # x = force_distance if abs(force_x) < force_threshold else 0.0,
                         x = (force_threshold + force_x) / k,
@@ -311,12 +318,12 @@ def test_robot_forces_tcp_client():
 
     sequence_queue.append(sequence)
     print("[QUEUE]", len(sequence_queue), sequence_queue)
-    sequence = move_robot_cartesian_representation_with_tcp_client(client, sequence,
+    sequence = move_robot_cartesian_representation_with_tcp_client(client, sequence, robot_current_configuration,
                         is_motion_relative=True, z=50.0)
     time.sleep(2)
 
     sequence_queue = get_and_handle_message_for_robot_motion(client, 
-                    robot_current_position, robot_current_forces, sequence_queue)
+                    robot_current_position, robot_current_forces, robot_current_configuration, sequence_queue)
     print("[QUEUE]", len(sequence_queue), sequence_queue)
 
     close_connection_with_tcp_client(client)

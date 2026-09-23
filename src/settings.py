@@ -5,7 +5,7 @@ IP_ADDRESS = '192.168.11.101'
 PORT_CONNECTION_PROCEDURE = 16001
 
 # Vision
-TEST_VISION = True # True == test (vision only) or False == run with robot
+TEST_VISION = 0#True # True == test (vision only) or False == run with robot
 SIMULATE_ROBOT_MOVEMENT = True
 CAMERA_ID = 1 # 0
 CONNECTION_INTERVAL = 0.2 # s
@@ -79,8 +79,8 @@ HOME_POSITION_HAND_TREATMENT = {
 WARM_UP_SKIP_TIME = 5
 
 # UI variables
-SHOW_KALMAN_ERROR = False # True
-SHOW_ROBOT_ERROR = False # True
+SHOW_KALMAN_ERROR = 1#False # True
+SHOW_ROBOT_ERROR = 1#False # True
 SHOW_3D_TRAJECTORIES = False
 
 # Old debug variables

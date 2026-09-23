@@ -72,6 +72,7 @@ def run():
     """
     
     robot_current_forces = [0, 0, 0, 0, 0, 0]
+    robot_current_configuration = {}
     sequence_queue = []
     sequence = 1 # ID of the motion command in RMI sequence
 
@@ -178,7 +179,7 @@ def run():
         if not TEST_VISION:
             # time.sleep(0.02)
             sequence_queue = get_and_handle_message_for_robot_motion(client, 
-                        robot_current_position, robot_current_forces, sequence_queue)
+                        robot_current_position, robot_current_forces, robot_current_configuration, sequence_queue)
             # print("[QUEUE]", len(sequence_queue), sequence_queue)
             # print("[ROBOT POSITION]", robot_current_position)
             # print("[FORCES]", robot_current_forces)
@@ -265,17 +266,12 @@ def run():
                 #         robot_current_position[1] > SHOULDER_POSITION[1]):
                 #     last_direction_change_time = time.time()
                 #     # change movement direction
-                #     r_motion_command = robot_current_position[5] - 180 if robot_current_position[5] > 0 else robot_current_position[5] + 180
-                #     sequence = move_robot_cartesian_representation_with_tcp_client(client, sequence, 
-                #                                 x = robot_current_position[0],
-                #                                 y = robot_current_position[1],
-                #                                 z = robot_current_position[2],
-                #                                 w = robot_current_position[3],
-                #                                 p = robot_current_position[4],
-                #                                 r = r_motion_command,
-                #                                 is_motion_relative=False, accuracy='FINE')
+                #     sequence = move_robot_cartesian_representation_with_tcp_client(client, sequence, robot_current_configuration,
+                #                                 r = 180,
+                #                                 is_motion_relative=True, accuracy='FINE')
+                # last_time_connection = time.time() + 5 # time for rotation
                 # else:    
-                sequence = move_robot_cartesian_representation_with_tcp_client(client, sequence, 
+                sequence = move_robot_cartesian_representation_with_tcp_client(client, sequence, robot_current_configuration,
                                                 x = x_motion_command,
                                                 y = y_motion_command,
                                                 z = robot_current_position[2],
@@ -327,7 +323,7 @@ def run():
     if not TEST_VISION:
         time.sleep(1)
         sequence_queue = get_and_handle_message_for_robot_motion(client, 
-                    robot_current_position, robot_current_forces, sequence_queue)
+                    robot_current_position, robot_current_forces, robot_current_configuration, sequence_queue)
         print("[QUEUE]", len(sequence_queue), sequence_queue)
 
         close_connection_with_tcp_client(client)

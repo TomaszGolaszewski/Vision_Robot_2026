@@ -290,6 +290,8 @@ def prepare_command_move_robot_cartesian_representation(sequence: int, is_motion
         motion_dict["Configuration"]["Turn6"] = 0
     else:
         motion_dict["Configuration"] = copy.deepcopy(robot_configuration)
+    motion_dict["Configuration"]["UToolNumber"] = UTOOLNUMBER
+    motion_dict["Configuration"]["UFrameNumber"] = UFRAMENUMBER
     motion_dict["Speed"] = speed
     motion_dict["TermType"] = "CNT" if accuracy == "CNT" else "FINE" # FINE or CNT
     motion_dict["TermValue"] = 100 if accuracy == "CNT" else 0 # 1-100

@@ -55,7 +55,11 @@ def run():
     robot_current_position = [943.208, 41.235, -25.849, -179.866, 0.01455, 120.837]
 
     """
-    robot[5] - obrot wokol Z - na PLUS obraca się CCW
+    joint: j4: -190>190
+    joint: j5: -180?>180
+    joint: j6: -190>190
+
+    cart: robot[5] - obrot wokol Z - na PLUS obraca się CCW
     120 to jest do góry (Y-)
     -60 to jest w dół (Y+)
     limit -20>180=-180>-1
@@ -70,9 +74,11 @@ def run():
  |   
  V
     """
-    
+
+    robot_current_joints = [0, 0, 0, 0, 0, 0]
     robot_current_forces = [0, 0, 0, 0, 0, 0]
     robot_current_configuration = {}
+    is_motion_forward = True
     sequence_queue = []
     sequence = 1 # ID of the motion command in RMI sequence
 
@@ -179,7 +185,8 @@ def run():
         if not TEST_VISION:
             # time.sleep(0.02)
             sequence_queue = get_and_handle_message_for_robot_motion(client, 
-                        robot_current_position, robot_current_forces, robot_current_configuration, sequence_queue)
+                        robot_current_position, robot_current_joints, robot_current_forces, 
+                        robot_current_configuration, sequence_queue)
             # print("[QUEUE]", len(sequence_queue), sequence_queue)
             # print("[ROBOT POSITION]", robot_current_position)
             # print("[FORCES]", robot_current_forces)
@@ -257,21 +264,29 @@ def run():
                 # check if the robot is in safe zone
                 x_motion_command = clamp(x_raw, X_MIN, X_MAX)
                 y_motion_command = clamp(y_raw, Y_MIN, Y_MAX)
-                r_motion_command = clamp(r_raw, Z_ANGLE_MIN, Z_ANGLE_MAX) # TODO
-                print(f"{x_motion_command:.2f} {y_motion_command:.2f} {r_motion_command:.2f} {prediction[2].item():.2f}")
+                if is_motion_forward:
+                    r_motion_command = clamp(r_raw, Z_ANGLE_MIN, Z_ANGLE_MAX)
+                else:
+                    r_motion_command = clamp(r_raw, Z_ANGLE_MIN-180, Z_ANGLE_MAX-180)
 
                 # TODO: fix
-                # if time.time() > last_direction_change_time + 5 and \
-                #         (dist_two_points(SHOULDER_POSITION, robot_current_position) > ARM_LENGTH or \
-                #         robot_current_position[1] > SHOULDER_POSITION[1]):
-                #     last_direction_change_time = time.time()
-                #     # change movement direction
-                #     sequence = move_robot_cartesian_representation_with_tcp_client(client, sequence, robot_current_configuration,
-                #                                 r = 180,
-                #                                 is_motion_relative=True, accuracy='FINE')
-                # last_time_connection = time.time() + 5 # time for rotation
-                # else:    
-                sequence = move_robot_cartesian_representation_with_tcp_client(client, sequence, robot_current_configuration,
+                print("dist: ", (dist_two_points(SHOULDER_POSITION, robot_current_position)))
+                if time.time() > last_direction_change_time + 20 and \
+                        (dist_two_points(SHOULDER_POSITION, robot_current_position) > ARM_LENGTH or \
+                        robot_current_position[1] > SHOULDER_POSITION[1]):
+                    last_direction_change_time = time.time()
+                    # change movement direction
+                    sequence = move_robot_cartesian_representation_with_tcp_client(client, sequence, robot_current_configuration,
+                                                r = 180,
+                                                is_motion_relative=True, accuracy='FINE', speed=50)
+                    if is_motion_forward:
+                        is_motion_forward = False
+                    else:
+                        is_motion_forward = True
+
+                    last_time_connection = time.time() + 5 # time for rotation
+                else:    
+                    sequence = move_robot_cartesian_representation_with_tcp_client(client, sequence, robot_current_configuration,
                                                 x = x_motion_command,
                                                 y = y_motion_command,
                                                 z = robot_current_position[2],
@@ -284,9 +299,7 @@ def run():
 
 
         # draw target robot position
-        draw_robot_position(side_panel, 
-                    x_raw, y_raw, r_raw, (255, 255, 255))
-                    # position_on_trajectory[0], position_on_trajectory[1], prediction[2], (255, 255, 255))
+        draw_robot_position(side_panel, x_raw, y_raw, r_raw, (255, 255, 255))
         # draw target path
         draw_trajectory(side_panel, history_target_position)
 
@@ -323,7 +336,8 @@ def run():
     if not TEST_VISION:
         time.sleep(1)
         sequence_queue = get_and_handle_message_for_robot_motion(client, 
-                    robot_current_position, robot_current_forces, robot_current_configuration, sequence_queue)
+                    robot_current_position, robot_current_joints, robot_current_forces, 
+                    robot_current_configuration, sequence_queue)
         print("[QUEUE]", len(sequence_queue), sequence_queue)
 
         close_connection_with_tcp_client(client)

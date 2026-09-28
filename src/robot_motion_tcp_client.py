@@ -9,6 +9,7 @@ def request_status(client: TcpClient) -> None:
     """Reqests robot's current position and data from the robot's position register."""
 
     send_message(client, '{"Command": "FRC_ReadCartesianPosition"}\r\n')
+    send_message(client, '{"Command": "FRC_ReadJointAngles"}\r\n')
     send_message(client, '{"Command": "FRC_ReadPositionRegister", "RegisterNumber":%s}\r\n' % REGISTER_NUMBER)
 
 def parse_coordinates(position_to_parse: json, coordinates: list) -> None: 
@@ -19,6 +20,12 @@ def parse_coordinates(position_to_parse: json, coordinates: list) -> None:
     coordinates[3] = position_to_parse.get("W", 0)
     coordinates[4] = position_to_parse.get("P", 0)
     coordinates[5] = position_to_parse.get("R", 0)
+
+def parse_joints(joints_to_parse: json, joints_list: list) -> None: 
+    """Extracts joints values from a JSON-like object and writes them into a list."""
+    for i in range(6):
+        joints_list[i] = joints_to_parse.get(f"J{i+1}", 0)
+
 
 # ===== CONNECTION =======================================================================
 
@@ -69,7 +76,8 @@ def get_message(client: TcpClient, print_message: bool = False) -> list:
     return error_list
 
 def get_and_handle_message_for_robot_motion(client: TcpClient, 
-                    robot_position: list, robot_forces: list, robot_configuration: dict, 
+                    robot_position: list, robot_joints: list, robot_forces: list, 
+                    robot_configuration: dict, 
                     sequence_queue: list,
                     print_message: bool = False) -> list:
     """Receive and decode a JSON message from an RMI TCP client.
@@ -101,10 +109,13 @@ def get_and_handle_message_for_robot_motion(client: TcpClient,
 
                 command = message.get("Command", None)
                 position = message.get("Position", None)
+                joints = message.get("JointAngle", None)
                 if command == "FRC_ReadCartesianPosition" and position:
                     parse_coordinates(position, robot_position)
                     robot_configuration.clear()
                     robot_configuration.update(message.get("Configuration", {}))
+                if command == "FRC_ReadJointAngles" and joints:
+                    parse_joints(joints, robot_joints)
                 if command == "FRC_ReadPositionRegister" and position:
                     parse_coordinates(position, robot_forces)
     
@@ -228,6 +239,7 @@ def test_robot_motion_tcp_client():
     """Test connection via TCP client with the robot and its functions."""
 
     robot_current_position = [0, 0, 0, 0, 0, 0]
+    robot_current_joints = [0, 0, 0, 0, 0, 0]
     robot_current_forces = [0, 0, 0, 0, 0, 0]
     robot_current_configuration = {}
     sequence_queue = []
@@ -247,7 +259,8 @@ def test_robot_motion_tcp_client():
         request_status(client)
         time.sleep(0.02) # time needed to receive response
         sequence_queue = get_and_handle_message_for_robot_motion(client, 
-                    robot_current_position, robot_current_forces, robot_current_configuration, sequence_queue)
+                    robot_current_position, robot_current_joints, robot_current_forces, 
+                    robot_current_configuration, sequence_queue)
             
         sequence_queue.append(sequence)
         print("[QUEUE]", len(sequence_queue), sequence_queue)
@@ -271,7 +284,8 @@ def test_robot_motion_tcp_client():
     time.sleep(2)
 
     sequence_queue = get_and_handle_message_for_robot_motion(client, 
-                    robot_current_position, robot_current_forces, robot_current_configuration, sequence_queue)
+                    robot_current_position, robot_current_joints, robot_current_forces, 
+                    robot_current_configuration, sequence_queue)
     print("[QUEUE]", len(sequence_queue), sequence_queue)
 
     close_connection_with_tcp_client(client)
@@ -280,6 +294,7 @@ def test_robot_forces_tcp_client():
     """Test the robot's movement while maintaining constant force."""
 
     robot_current_position = [0, 0, 0, 0, 0, 0]
+    robot_current_joints = [0, 0, 0, 0, 0, 0]
     robot_current_forces = [0, 0, 0, 0, 0, 0]
     robot_current_configuration = {}
     sequence_queue = []
@@ -299,7 +314,8 @@ def test_robot_forces_tcp_client():
         request_status(client)
         time.sleep(0.02) # time needed to receive response
         sequence_queue = get_and_handle_message_for_robot_motion(client, 
-                        robot_current_position, robot_current_forces, robot_current_configuration, sequence_queue)
+                        robot_current_position, robot_current_joints, robot_current_forces, 
+                        robot_current_configuration, sequence_queue)
         sequence_queue.append(sequence)
 
         # print("[QUEUE]", len(sequence_queue), sequence_queue)
@@ -323,7 +339,8 @@ def test_robot_forces_tcp_client():
     time.sleep(2)
 
     sequence_queue = get_and_handle_message_for_robot_motion(client, 
-                    robot_current_position, robot_current_forces, robot_current_configuration, sequence_queue)
+                    robot_current_position, robot_current_joints, robot_current_forces, 
+                    robot_current_configuration, sequence_queue)
     print("[QUEUE]", len(sequence_queue), sequence_queue)
 
     close_connection_with_tcp_client(client)

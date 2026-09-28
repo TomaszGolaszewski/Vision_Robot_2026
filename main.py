@@ -47,6 +47,7 @@ def run():
 
     # robot variables
     robot_current_position = [0, 0, 0, 0, 0, 0]
+    robot_current_joints = [0, 0, 0, 0, 0, 0]
     robot_current_forces = [0, 0, 0, 0, 0, 0]
     robot_current_configuration = {}
     sequence_queue = []
@@ -151,7 +152,8 @@ def run():
         if not TEST_VISION:
             # time.sleep(0.02)
             sequence_queue = get_and_handle_message_for_robot_motion(client, 
-                        robot_current_position, robot_current_forces, robot_current_configuration, sequence_queue)
+                        robot_current_position, robot_current_joints, robot_current_forces, 
+                        robot_current_configuration, sequence_queue)
             # print("[QUEUE]", len(sequence_queue), sequence_queue)
             # print("[ROBOT POSITION]", robot_current_position)
             # print("[FORCES]", robot_current_forces)
@@ -224,7 +226,8 @@ def run():
     if not TEST_VISION:
         time.sleep(1)
         sequence_queue = get_and_handle_message_for_robot_motion(client, 
-                    robot_current_position, robot_current_forces, robot_current_configuration, sequence_queue)
+                    robot_current_position, robot_current_joints, robot_current_forces, 
+                    robot_current_configuration, sequence_queue)
         print("[QUEUE]", len(sequence_queue), sequence_queue)
 
         close_connection_with_tcp_client(client)

@@ -23,8 +23,8 @@ BRIGHTNESS_THRESHOLD = 200
 DPMM = 210 # dots (pixels) per 100 millimeters on camera image (fixed distance to camera)
 MOVEMENT_ALONG_ARM_SPEED = 20 # mm/s
 MOVEMENT_ALONG_ARM_INCREMENT = 20 # mm
-SHOULDER_POSITION = [900, 150] # [x, y] mm (global coordinates)
-ARM_LENGTH = 250 # mm
+SHOULDER_POSITION = [880, 200] # [900, 150] # [x, y] mm (global coordinates)
+ARM_LENGTH = 400 # mm
 ARM_WIDTH = 100 # mm
 FLUCTUATION_PERIOD = 5 # s
 MOTION_MODE = 1 # 1 = linear, 2 = sinusoidal
@@ -39,9 +39,9 @@ SEQUENCE_MAX_LENGTH = 7
 X_MIN = 770 # mm
 X_MAX = 1100
 Y_MIN = -280
-Y_MAX = 165
-Z_ANGLE_MIN = 110 # 90 # deg
-Z_ANGLE_MAX = 130 # 150
+Y_MAX = 260 # 165
+Z_ANGLE_MIN = 100 # 90 # deg
+Z_ANGLE_MAX = 140 # 150
 
 # TODO: add main HOME
 # HOME_POSITION = {
@@ -68,7 +68,7 @@ HOME_POSITION_1D_TEST = {
 	"j5": 56.5, 
 	"j6": -52.5,
 }
-# HOME_POSITION_HAND_TREATMENT = {
+# HOME_POSITION_HAND_TREATMENT_old_config = {
 # 	"j1": -1, 
 # 	"j2": 37.4, 
 # 	"j3": -21.7, 
@@ -76,17 +76,26 @@ HOME_POSITION_1D_TEST = {
 # 	"j5": 68.4, 
 # 	"j6": -52.6,
 # }
+# HOME_POSITION_HAND_TREATMENT_old_position = {
+# 	"j1": 18.5, 
+# 	"j2": 33.5, 
+# 	"j3": -25.5, 
+# 	"j4": 1.3, 
+# 	"j5": -63.8, 
+# 	"j6": 102.0,
+# }
 HOME_POSITION_HAND_TREATMENT = {
-	"j1": 18.5, 
-	"j2": 33.5, 
-	"j3": -25.5, 
-	"j4": 1.3, 
-	"j5": -63.8, 
-	"j6": 102.0,
+	"j1": 24.8, 
+	"j2": 34.7, 
+	"j3": -24.4, 
+	"j4": 1.1, 
+	"j5": -65.5, 
+	"j6": 95.0,
 }
 
 # Data settings
-WARM_UP_SKIP_TIME = 5
+WARM_UP_SKIP_TIME = 4 # s
+ROTATION_TIME = 4 # s
 
 # UI variables
 SHOW_KALMAN_ERROR = False # True

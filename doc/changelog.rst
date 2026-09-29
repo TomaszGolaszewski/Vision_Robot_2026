@@ -5,11 +5,16 @@ Next:
 v0.7 - Following trajectory on moving surface
 ======
 
+v0.6.12 - 29.09.2026
+------
+* Fixed the entry condition for the rotation procedure;
+* Changes in workspace parameters to proceed with further testing.
+
 v0.6.11 - 28.09.2026
 ------
-* Added tool number override (UToolNumber, UFrameNumber).
-* Added support for retrieving robot joint positions.
-* Added a robot return mechanism.
+* Added tool number override (UToolNumber, UFrameNumber);
+* Added support for retrieving robot joint positions;
+* Added a robot return mechanism;
 * Updated the robot's start position to operate in a different configuration.
 
 v0.6.10 - 23.09.2026

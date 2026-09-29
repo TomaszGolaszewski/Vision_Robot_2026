@@ -10,6 +10,11 @@ Its goal is to enhance the capabilities of an industrial robot by integrating ma
 v0.6 - Ultrasound Therapy Project (2D)
 
 ### Last changes:
+v0.6.12 - 29.09.2026
+
+* Fixed the entry condition for the rotation procedure;
+* Changes in workspace parameters to proceed with further testing.
+
 v0.6.11 - 28.09.2026
 
 * Added tool number override (UToolNumber, UFrameNumber).
@@ -25,16 +30,3 @@ v0.6.9 - 19.08.2026
 
 * Changed the method of calculating the trajectory - now the robot follows the target.
 
-v0.6.8 - 17.08.2026
-
-* Added functionality to maintain the robot's position within specified safe area;
-* Added function to simulate robot position change;
-* Enabled communication with the robot;
-* Changed Kalman filter coefficients.
-
-v0.6.7 - 16.08.2026
-
-* Updated algorithm that calculates sinusoidal trajectory reverses after reaching specified distance;
-* Added operating mode switch - linear / sinusoidal;
-* Added parameterization of motion along the arm;
-* Moved starting point of trajectory to shoulder position.

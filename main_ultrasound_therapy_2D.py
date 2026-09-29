@@ -52,7 +52,8 @@ def run():
     y_raw = SHOULDER_POSITION[1]
     r_raw = TOOL_ANGLE_OFFSET
     # robot_current_position = [0, 0, 0, 0, 0, 0]
-    robot_current_position = [943.208, 41.235, -25.849, -179.866, 0.01455, 120.837]
+    # robot_current_position = [943.208, 41.235, -25.849, -179.866, 0.01455, 120.837]
+    robot_current_position = [880, 235, -27, -179.9, 1, 120.4]
 
     """
     joint: j4: -190>190
@@ -267,14 +268,11 @@ def run():
                 if is_motion_forward:
                     r_motion_command = clamp(r_raw, Z_ANGLE_MIN, Z_ANGLE_MAX)
                 else:
-                    r_motion_command = clamp(r_raw, Z_ANGLE_MIN-180, Z_ANGLE_MAX-180)
+                    r_motion_command = clamp(r_raw-360, Z_ANGLE_MIN-180, Z_ANGLE_MAX-180)
 
-                # TODO: fix
-                print("dist: ", (dist_two_points(SHOULDER_POSITION, robot_current_position)))
-                if time.time() > last_direction_change_time + 20 and \
-                        (dist_two_points(SHOULDER_POSITION, robot_current_position) > ARM_LENGTH or \
-                        robot_current_position[1] > SHOULDER_POSITION[1]):
-                    last_direction_change_time = time.time()
+                if (is_motion_forward and dist_two_points(SHOULDER_POSITION, robot_current_position) > ARM_LENGTH) or \
+                    (not is_motion_forward and robot_current_position[1] > SHOULDER_POSITION[1]):
+
                     # change movement direction
                     sequence = move_robot_cartesian_representation_with_tcp_client(client, sequence, robot_current_configuration,
                                                 r = 180,
@@ -284,7 +282,7 @@ def run():
                     else:
                         is_motion_forward = True
 
-                    last_time_connection = time.time() + 5 # time for rotation
+                    last_time_connection = time.time() + ROTATION_TIME # time for rotation
                 else:    
                     sequence = move_robot_cartesian_representation_with_tcp_client(client, sequence, robot_current_configuration,
                                                 x = x_motion_command,
